@@ -1,5 +1,6 @@
 import { type Color, parseHex, TRANSPARENT, toHex } from "./color.ts";
 import { PxError, didYouMean } from "./errors.ts";
+import { colorList } from "./util.ts";
 
 export const INDEX_KEYS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const RESERVED = new Set([".", "_", " ", "#"]);
@@ -141,6 +142,23 @@ export class Palette {
       throw new PxError(`unknown color key '${spec}'${hint} (have: ${named.join("")}${steps})`);
     }
     return c;
+  }
+
+  /** Colors of a key list: keys, steps ("o-1"), hex, and families ("z*" = every tone of z's ramp). */
+  resolveSet(keys: string | string[]): Set<Color> {
+    const out = new Set<Color>();
+    for (const k of colorList(keys)) {
+      if (k.length > 1 && k.endsWith("*") && !k.startsWith("#")) {
+        const base = this.resolve(k.slice(0, -1));
+        const r = base === null ? undefined : this.rampOf(base);
+        if (!r) throw new PxError(`'${k}': key '${k.slice(0, -1)}' is in no ramp, so it has no family`);
+        r.ramp.forEach((c) => out.add(c));
+        continue;
+      }
+      const c = this.resolve(k);
+      if (c !== null) out.add(c);
+    }
+    return out;
   }
 
   /** "o-2" / "o+1": a key stepped along its ramp (clamped at the ends). */

@@ -109,11 +109,7 @@ export class Canvas {
 
   private colorTest(on: string): (c: Color) => boolean {
     if (on === "*") return (c) => c !== TRANSPARENT;
-    const set = new Set<Color>();
-    for (const k of colorList(on)) {
-      const c = this.color(k);
-      if (c !== null) set.add(c);
-    }
+    const set = this.pal.resolveSet(on);
     return (c) => set.has(c);
   }
 

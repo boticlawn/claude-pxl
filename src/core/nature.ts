@@ -91,7 +91,7 @@ export interface WaterOpts {
   reflect?: string;
   /** How far down reflections reach in px (default h / 2). */
   reflectLen?: number;
-  /** Foam where things above stand in the water: width in px (default 1, 0 = none). */
+  /** Foam under everything standing right above the top row: width in px (default 0; prefer foam()). */
   foam?: number;
   seed?: number;
 }
@@ -132,7 +132,7 @@ export function water(cv: Canvas, x: number, y: number, w: number, h: number, c:
     for (let xx = 0; xx < w; xx++) cv.plot(x + xx, y + yy, pick(xx, yy, off[yy * w + xx]));
   if (o.reflect) reflect(cv, x, y, w, o.reflectLen ?? Math.round(h / 2), { keys: o.reflect, seed: o.seed });
   // Foam ring where posts, rocks and walls meet the surface.
-  const fw = o.foam ?? 1;
+  const fw = o.foam ?? 0;
   if (fw > 0)
     for (let xx = 0; xx < w; xx++) {
       const here = standing[xx], left = standing[xx - 1], right = standing[xx + 1];

@@ -53,7 +53,7 @@ Turns every pixel that has a normal and a ramp color into the right step of its 
 
 - `light`: `"tl"` (default), `"t"`, `"tr"`, `"l"`, `"r"`, `"front"` or `[x, y, z]` (y down, z toward the viewer). **Use one light direction per scene.**
 - `contrast` (1): how many steps the light spreads over. 0.6 for soft things (clouds, cloth), 1.2 for hard ones.
-- `dither` (0.35): ordered dither on band seams; 0 = hard cel bands.
+- `dither` (0.2): ordered dither on band seams; 0 = hard cel bands.
 - `bounce` (0.6): reflected light into undersides. `rim` (1): extra step on the silhouette facing away from the light. `spec` (0): a highlight pop on the brightest spot.
 
 Where to call it:
@@ -80,6 +80,11 @@ Where to call it:
 | `mountain(x, baseY, w, h, c, { peak, rough, gullies })` | ridge with lit/shadowed slopes and creases |
 
 All take `seed` to reroll.
+
+## Key families
+
+Anywhere a list of keys is taken (`on`, `around`, `keys`, `glow`, `emit`, `foam`, `c.is`), `"z*"` means
+every tone of material z's ramp. After `form()` a rock is z-2..z+2, so write `foam("z*", { on: "q*" })`.
 
 ## Placing by the feet
 

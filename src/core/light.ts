@@ -129,11 +129,7 @@ export function applyLighting(img: Img, masks: LightMasks, lamps: Lamp[], o: Lig
     return lit;
   };
 
-  const emit = new Set<Color>();
-  for (const k of colorList(o.emit ?? "")) {
-    const c = pal.resolve(k);
-    if (c !== null) emit.add(c);
-  }
+  const emit = pal.resolveSet(o.emit ?? "");
 
   const out = new Img(img.w, img.h), map = new Img(img.w, img.h);
   for (let y = 0; y < img.h; y++)

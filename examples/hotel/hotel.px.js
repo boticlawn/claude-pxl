@@ -4,6 +4,7 @@
 include("palette.px.js")
 include("props_room.px.js")
 include("people.px.js")
+include("props_outdoor.px.js")
 
 const W = 480, H = 270
 // Building geometry
@@ -118,12 +119,35 @@ function furnish(c) {
   for (const [x, f] of [[COLS[1], f0], [COLS[2], f1], [COLS[3], f0]]) c.stamp("room_vine", x + 3, f.top, { anchor: "t" })
 }
 
+// ---------------------------------------------------------------- outside
+function outside(c) {
+  const put = (n, x, y, o = {}) => c.stamp(n, x, y, { anchor: "b", ...o })
+  // roof: sign in the middle, a little terrace on the tower
+  put("out_sign_hotel", 176, 27)
+  put("out_palm_potted", BX0 + 30, 26); put("out_hibiscus", BX0 + 44, 26)
+  // dock life
+  for (const x of [40, 118, 196, 274]) put("out_lantern", x, DOCK_Y)
+  put("out_rope_coil", 150, DOCK_Y); put("room_suitcase", 64, 214); put("room_suitcase", 72, 214); put("out_towel_stack", 98, 214)
+  c.stamp("out_lifering", 222, DOCK_Y + 9)
+  // beach: tiki bar behind the pool, umbrellas and loungers in front
+  put("out_tiki_bar", 452, 171); put("out_flower_bush", 352, 171); put("out_umbrella_teal", 372, 171)
+  c.shadow(404, 212, 12, 2); c.shadow(452, 220, 12, 2)
+  put("out_umbrella", 412, 212); put("out_lounger", 404, 213); put("ppl_lounging", 404, 209)
+  put("out_lounger", 452, 221); put("out_beach_ball", 430, 214); put("ppl_guest_a", 340, 203)
+  put("out_pool_ladder", 458, 186)
+  put("ppl_swimmer_ring", 390, 186); put("ppl_swimmer_a", 420, 184)
+  // shore rocks
+  put("out_rock_a", 298, 218); put("out_rock_c", 372, 230); put("out_rock_b", 470, 238)
+  // boat at the pier, swimmers in the lagoon
+  put("out_boat", 168, 236); put("ppl_swimmer_b", 250, 232)
+}
+
 // ---------------------------------------------------------------- the scene
 
 scene("hotel", { w: W, h: H, bg: "a" },
   // sky: deeper blue up top, pale at the horizon; sun; clouds
   layer("sky",
-    grad(0, 0, W, SEA_Y, ["a-1", "a", "a+1", "a+2"], "v", 0.3),
+    grad(0, 0, W, SEA_Y, ["a-1", "a", "a+1", "a+2"], "v", 0.15),
     ball(440, 20, 7, "y+2"),
     cloud(380, 44, 64, 18, "e", { seed: 3 }), cloud(452, 62, 34, 10, "e", { seed: 8 }), cloud(250, 12, 40, 10, "e", { seed: 5 }),
     form({ contrast: 1.1, rim: 0 })),
@@ -215,6 +239,18 @@ scene("hotel", { w: W, h: H, bg: "a" },
   reflect(28, 240, 100, 14, { seed: 4 }),
   foam("d", { on: "q" }),
 
+  // ---------------- underwater: coral and fish, tinted by the water above them
+  layer("underwater", { haze: 0.22, hazeColor: "q+1" }, (c) => {
+    const put = (n, x, y, o = {}) => c.stamp(n, x, y, { anchor: "b", ...o })
+    put("out_coral_fan", 220, 270); put("out_coral_branch", 236, 270); put("out_coral_brain", 252, 270); put("out_seaweed", 266, 270)
+    put("out_coral_brain", 300, 270); put("out_coral_fan", 318, 270); put("out_seaweed", 332, 270); put("out_coral_branch", 346, 270)
+    put("out_coral_brain", 410, 270); put("out_coral_branch", 426, 270); put("out_coral_fan", 448, 270); put("out_seaweed", 470, 270)
+    for (let x = 196, i = 0; x < 476; x += 11, i++) put(["out_coral_branch", "out_coral_brain", "out_coral_fan", "out_seaweed"][i % 4], x + (i % 3), 262 + (i % 2) * 3, { flip: i % 2 ? "x" : undefined })
+    put("out_fish_yellow", 290, 252); put("out_fish_blue", 302, 256); put("out_fish_striped", 380, 248); put("out_fish_yellow", 396, 254, { flip: "x" }); put("out_fish_blue", 150, 258)
+  }),
+  layer("outside", (c) => outside(c)),
+  foam("z*", { on: "q*" }), foam("e*", { on: "q*" }),
+
   // ---------------- palms and greenery
   layer("green",
     palm(330, 205, { h: 110, lean: 26, r: 4, trunk: "w", leaf: "g", fronds: 12, len: 52, nuts: "d-1", seed: 2 }),
@@ -222,6 +258,11 @@ scene("hotel", { w: W, h: H, bg: "a" },
     palm(34, 44, { h: 30, lean: -6, trunk: "w", leaf: "g", fronds: 9, len: 20, seed: 4 }),
     foliage(22, 150, 14, 12, "g", { flowers: "f", bloom: 0.8, seed: 3 }),
     foliage(310, 180, 14, 8, "g", { flowers: "f", seed: 8 }),
-    foliage(462, 150, 20, 10, "v", { seed: 12 }),
+    foliage(80, 40, 10, 5, "g", { flowers: "f", bloom: 0.9, size: [1, 3], seed: 21 }),
+    foliage(70, 60, 5, 14, "g", { flowers: "f", bloom: 0.7, size: [1, 3], seed: 22 }),
+    foliage(326, 40, 9, 5, "g", { flowers: "f", bloom: 0.8, size: [1, 3], seed: 23 }),
+    foliage(332, 70, 4, 22, "g", { size: [1, 2], seed: 24 }),
+    foliage(18, 100, 6, 18, "g", { flowers: "f", bloom: 0.6, size: [1, 3], seed: 25 }),
+    foliage(250, 40, 8, 4, "v", { size: [1, 2], seed: 26 }),
     form()),
   glow("y+1", { r: 4, strength: 0.25 }))

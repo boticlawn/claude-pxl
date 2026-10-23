@@ -140,7 +140,7 @@ export interface FormOpts {
   light?: LightSpec;
   /** How many ramp steps the light spreads over, relative to the ramp (default 1). */
   contrast?: number;
-  /** 0 = hard bands, 1 = ordered dither across each band seam (default 0.35). */
+  /** 0 = hard bands, 1 = ordered dither across each band seam (default 0.2). */
   dither?: number;
   /** Light coming back from below into shadows, in steps (default 0.6). */
   bounce?: number;
@@ -160,7 +160,7 @@ export function applyForm(img: Img, pal: Palette, o: FormOpts = {}, ok?: (i: num
   const nm = img.norm;
   if (!nm) return;
   const L = lightDir(o.light);
-  const contrast = o.contrast ?? 1, dither = o.dither ?? 0.35, bounce = o.bounce ?? 0.6, rim = o.rim ?? 1, spec = o.spec ?? 0;
+  const contrast = o.contrast ?? 1, dither = o.dither ?? 0.2, bounce = o.bounce ?? 0.6, rim = o.rim ?? 1, spec = o.spec ?? 0;
   const front = L[2]; // how lit a face looking straight at the viewer is: base color stays there
   const { w, h } = img;
   const out = img.data.slice();
