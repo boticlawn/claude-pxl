@@ -19,8 +19,8 @@ function domeSurf(c, x, y, col, cx, cy, rx, ry, flat = 1) {
 function umbrella(name, stripe) {
   const cx = 11, cy = 8, R = 11, ry = 6
   sprite(name, { form: { contrast: 0.8 }, outline: "auto", w: 23, h: 24 },
-    cyl(10, 9, 2, 15, "w"),
-    hline(10, 13, 2, "w-1"),                                          // pole joint
+    tube(11, 9, 11, 23, 0.5, "w"),
+    px(11, 14, "w-2"),                                                // pole joint
     (c) => {
       const e = c.color("e"), u = c.color(stripe)
       const gore = (x, y) => {
@@ -67,27 +67,29 @@ sprite("out_lounger", { ...S, w: 22, h: 9 },
   hline(13, 3, 7, "e"), vline(21, 4, 3, "e"))
 
 // ---------------------------------------------------------------- tiki bar
-// One tier of straw: a sloped band (top faces up) ending in a fringe of strands with a ragged hem.
-function thatch(c, x0, x1, y0, h, key, seed, inset = 3) {
+// One tier of straw: a short sloped band (top faces the sky) ending in a fringe of strands with a
+// ragged hem. Tiers are drawn bottom-up like shingles, so each hem hangs over the tier below and
+// casts a 1px shadow onto it.
+function thatch(c, x0, x1, y0, h, key, seed, below) {
   const rnd = c.rng(seed)
   const base = c.color(key), dark = c.color(key + "-1"), lite = c.color(key + "+1")
   const mid = (x0 + x1) / 2, half = (x1 - x0) / 2
   for (let x = x0; x <= x1; x++) {
     const edge = Math.abs(x - mid) / half                              // 0 center .. 1 eaves
-    const top = y0 + Math.round(Math.max(0, edge - 0.75) * 4 * inset) // hip roof: corners lower
-    const len = h - (x % 2 ? 1 : 0) - Math.floor(rnd() * 1.6)
-    const streak = rnd()
+    const top = y0 + Math.round(Math.max(0, edge - 0.8) * 10)          // hipped corners
+    const len = h - [0, 0, 1, 0, 1, 1, 0][(x + seed) % 7]               // bundles: ragged in 2-3px groups
+    const streak = (x * 7 + seed * 3) % 9 === 0 ? 0 : (x * 5 + seed) % 11 === 0 ? 1 : 0.5   // regular strand rhythm
     for (let y = top; y < y0 + len; y++) {
       const t = (y - y0) / h
       let col = base
-      if (t > 0.35 && streak < 0.3) col = dark                          // strand gaps
-      else if (t > 0.45 && streak > 0.85) col = lite                    // sunlit strands
-      const nx = (x - mid) / half * 0.5
-      c.surf(x, y, col, nx, t < 0.4 ? -0.9 : 0.1, t < 0.4 ? 0.45 : 1)
+      if (t > 0.3 && streak < 0.2) col = dark                          // strand gaps
+      else if (t > 0.3 && streak > 0.9) col = lite                     // sunlit strands
+      c.surf(x, y, col, (x - mid) / half * 0.5, t < 0.3 ? -0.8 : -0.2 + t * 0.9, t < 0.3 ? 0.6 : 1)   // fringe curls under toward the hem
     }
+    if (below) c.px(x, y0 + len, "w-1")                                // hem shadow on the tier below
   }
 }
-sprite("out_tiki_bar", { ...S, w: 56, h: 36 },
+sprite("out_tiki_bar", { form: { dither: 0.1 }, outline: "auto", w: 56, h: 36 },
   // dim back wall under the roof, shelf with bottles
   rect(5, 10, 46, 12, "d-2"),
   block(8, 18, 40, 2, "d", { bevel: 1 }),
@@ -107,18 +109,18 @@ sprite("out_tiki_bar", { ...S, w: 56, h: 36 },
   block(6, 20, 44, 16, "C", { top: 2, topColor: "d+1", bevel: 1 }),
   (c) => { for (let x = 8; x < 50; x += 3) c.vline(x, 23, 13, "C-1") },
   hline(6, 22, 44, "d-1"), hline(6, 34, 44, "C-2"),
-  block(20, 24, 16, 7, "d", { bevel: 1 }), text(22, 25, "BAR", "y+1"),
-  px(20, 24, "z+2"), px(35, 24, "z+2"),
+  block(29, 24, 13, 7, "d", { bevel: 1 }), text(30, 25, "BAR", "y+1"),
+  px(29, 24, "z+2"), px(41, 24, "z+2"),                                 // nail heads
   // roof: three straw tiers (back to front), ridge pole on top
   (c) => {
-    thatch(c, 9, 46, 1, 6, "w", 3)
-    thatch(c, 3, 52, 4, 7, "y-1", 4)
-    thatch(c, 0, 55, 8, 6, "y", 5)
+    thatch(c, 0, 55, 9, 6, "y", 5)
+    thatch(c, 3, 52, 5, 6, "y", 4, "y")
+    thatch(c, 9, 46, 1, 6, "y", 3, "y")
   },
   tube(10, 1, 45, 1, 1, "d"), ball(9, 1, 1.5, "d"), ball(46, 1, 1.5, "d"),
   // stools: teal seat, wooden pole, foot ring
   (c) => {
-    for (const x of [14, 28, 42]) {
+    for (const x of [11, 22, 46]) {
       c.vline(x, 31, 4, "d-1"); c.hline(x - 2, 35, 5, "d-1"); c.hline(x - 1, 33, 3, "z+1")
       c.cyl(x - 3, 29, 7, 3, "t", { cap: 1, capColor: "t+1" })
     }
@@ -126,11 +128,13 @@ sprite("out_tiki_bar", { ...S, w: 56, h: 36 },
 
 // ---------------------------------------------------------------- motor boat
 // Waterline = bottom row. Hull poly with a rising bow; dome relief, stripe painted along the sheer.
-sprite("out_boat", { ...S, w: 64, h: 22 },
+sprite("out_boat", { form: { dither: 0.1 }, outline: "auto", w: 64, h: 22 },
   // bimini canopy on two poles over the cockpit
   vline(12, 3, 9, "z+1"), vline(30, 3, 9, "z+1"),
   block(9, 0, 25, 3, "t", { bevel: 1 }),
-  (c) => { for (let x = 10; x < 34; x += 3) c.px(x, 3, "t-1") },       // scalloped valance
+  hline(9, 2, 25, "t-1"),                                              // valance seam
+  // helm seat in the open cockpit
+  block(20, 7, 5, 4, "t", { bevel: 1 }), block(18, 9, 9, 2, "t", { bevel: 1 }),
   // cabin + slanted windshield
   block(30, 5, 12, 7, "e", { bevel: 1 }),
   poly([39, 5, 43, 5, 49, 11, 42, 11], "j"),
@@ -174,28 +178,29 @@ rock("out_rock_c", 30, 12, [[17, 6, 8, 6, 1], [9, 7, 8, 5], [23, 8, 6, 4], [27, 
 
 // ---------------------------------------------------------------- coral & sea life
 // Sea fan: a lattice of radial ribs and arcs, shaded as one curved fan.
-sprite("out_coral_fan", { ...S, w: 14, h: 12 },
+// No outline: an outline would fill every net hole (it treats 1px gaps as edges), and a soft
+// unoutlined edge suits things seen through water. Rim light + a dark bottom row keep it readable.
+sprite("out_coral_fan", { form: { rim: 1.5, dither: 0, contrast: 0.8 }, w: 14, h: 12 },
   (c) => {
-    const col = c.color("i"), cx = 6.5, cy = 11, R = 7
-    const on = (x, y) => {
-      const dx = x - cx, dy = (y - cy) * 1.15, d = Math.hypot(dx, dy)
-      if (d > R || y > 10) return false
-      const ang = Math.atan2(dy, dx) // -pi .. 0
-      const rib = Math.abs(((ang / Math.PI) * 7 + 70.5) % 1 - 0.5) < 0.22 // 7 ribs
-      const arc = Math.abs(d - 3.6) < 0.6 || d > R - 1.1 || Math.abs(d - 5.6) < 0.5
-      return rib || arc || d < 2
-    }
-    for (let y = 0; y < 12; y++) for (let x = 0; x < 14; x++) if (on(x, y)) domeSurf(c, x, y, col, cx, cy - 4, 7, 6, 0.7)
+    const col = c.color("i")
+    for (let y = 0; y < 11; y++)
+      for (let x = 0; x < 14; x++) {
+        const u = (x + 0.5 - 7) / 7, v = (y + 0.5 - 11) / 11
+        if (u * u + v * v <= 1) domeSurf(c, x, y, col, 7, 6, 7, 6, 0.8)
+      }
+    // net holes in staggered rows, then the ribs over them so the ribs stay continuous
+    for (let y = 2; y < 10; y += 2) for (let x = (y % 4 ? 2 : 4); x < 13; x += 3) if (c.is(x, y, "i")) c.px(x, y, "_")
+    for (const [x, y] of [[0, 8], [1, 4], [4, 1], [7, 0], [10, 1], [12, 4], [13, 8]]) c.line(7, 10, x, y, "i-1")
+    for (const [x, y] of [[2, 1], [11, 1], [0, 5], [13, 5], [5, 0], [9, 0]]) c.px(x, y, "_")
   },
-  tube(6.5, 9, 6.5, 11, 0.8, "i-1"),
-  px(3, 3, "i+1"), px(9, 2, "i+1"))
+  tube(7, 9, 7, 11, 0.8, "i-2"))
 // Branching coral: a trunk splitting twice, magenta polyp tips painted on the ends.
 sprite("out_coral_branch", { ...S, w: 12, h: 12 },
   tube(6, 11, 6, 7, 1.2, "o", { r1: 1 }),
   tube(6, 8, 3, 4, 1, "o", { r1: 0.7 }), tube(6, 8, 9, 5, 1, "o", { r1: 0.7 }),
   tube(3, 5, 1, 1, 0.7, "o", { r1: 0.6 }), tube(3, 5, 4, 1, 0.6, "o"),
   tube(9, 6, 11, 3, 0.6, "o"), tube(9, 6, 8, 2, 0.6, "o"), tube(6, 8, 6, 3, 0.7, "o"),
-  px(1, 0, "f"), px(4, 0, "f"), px(11, 2, "f"), px(8, 1, "f"), px(6, 2, "f"),
+  px(1, 1, "f"), px(4, 1, "f"), px(11, 3, "f"), px(8, 2, "f"), px(6, 3, "f"),
   px(5, 9, "o-2"), px(7, 6, "o-2"))
 sprite("out_coral_brain", { ...S, w: 12, h: 8 },
   ball(6, 7, 6, "g", { ry: 6.5 }),
@@ -205,15 +210,10 @@ sprite("out_coral_brain", { ...S, w: 12, h: 8 },
   },
   px(4, 2, "y"), px(5, 1, "y"), px(8, 2, "y"), px(2, 4, "y"), px(10, 4, "y"), px(6, 4, "y"))
 sprite("out_seaweed", { ...S, w: 6, h: 14 },
-  (c) => {
-    for (let y = 0; y < 14; y++) {
-      const x = 1.5 + Math.sin(y * 0.55) * 1.1
-      c.tube(x, y, x, y + 1, 0.55 + (y / 14) * 0.3, "g")
-      const x2 = 4 + Math.sin(y * 0.55 + 2) * 0.9
-      if (y > 5) c.tube(x2, y, x2, y + 1, 0.5, "g-1")
-    }
-  },
-  px(1, 3, "g+1"), px(2, 7, "g+1"))
+  (c) => {                                                             // two wavy blades, front one taller
+    for (let y = 13; y > 4; y--) c.tube(4 + Math.sin(y * 0.6 + 2) * 0.9, y, 4 + Math.sin((y - 1) * 0.6 + 2) * 0.9, y - 1, 0.5, "g-1")
+    for (let y = 13; y > 0; y--) c.tube(2 + Math.sin(y * 0.55) * 1.1, y, 2 + Math.sin((y - 1) * 0.55) * 1.1, y - 1, 0.45 + (y / 14) * 0.4, "g")
+  })
 
 // Fish face left. Body pixels get dome relief; fins and eye are painted.
 function fish(name, body, rows, extra = []) {
@@ -223,7 +223,7 @@ function fish(name, body, rows, extra = []) {
     bump("dome", { on: body, depth: 1.2 }),
     ...extra)
 }
-fish("out_fish_yellow", "y", [".BBB.T", "BBBBTT", ".BBB.T"], [px(1, 1, "l"), px(2, 0, "o")])
+fish("out_fish_yellow", "y", [".BBB.T", "BBBBTT", ".BBB.T"], [px(1, 1, "l"), px(3, 0, "y+1")])
 fish("out_fish_blue", "b", [".BBB.T", "BBBBTT", ".BBB.T"], [px(1, 1, "l"), px(4, 1, "y"), px(5, 0, "y"), px(5, 1, "y"), px(5, 2, "y")])
 fish("out_fish_striped", "o", ["..BBB..", ".BBBBBT", "BBBBBTT", ".BBBB.T"], [vline(2, 1, 3, "e"), vline(4, 0, 4, "e"), px(1, 2, "l")])
 
@@ -244,9 +244,10 @@ sprite("out_lifering", { ...S, w: 9, h: 9 },
 sprite("out_lantern", { ...S, w: 5, h: 8 },
   px(2, 0, "z+1"),                                                     // hanging ring
   block(0, 1, 5, 2, "z", { bevel: 1 }),
-  rect(1, 3, 3, 3, "y+1"), px(2, 4, "e"), px(1, 3, "e"),              // lit glass: flat (no normal)
+  rect(1, 3, 3, 3, "y"), vline(2, 3, 3, "y+1"), px(2, 4, "e"),      // lit glass + flame: flat (no normal)
   vline(0, 3, 3, "z-1"), vline(4, 3, 3, "z-1"),
-  block(0, 6, 5, 2, "z", { bevel: 1 }))
+  block(0, 6, 5, 2, "z", { bevel: 1 }),
+  glow("y", { r: 2, strength: 0.35 }))
 sprite("out_post", { ...S, w: 7, h: 18 },
   cyl(1, 0, 5, 18, "d", { cap: 1, capColor: "d+1" }),
   vline(3, 9, 6, "d-1"), px(2, 12, "d-1"), hline(1, 16, 5, "d-1"),   // grain, wet line
@@ -255,11 +256,14 @@ sprite("out_post", { ...S, w: 7, h: 18 },
   px(0, 7, "C"), px(0, 8, "C-1"))
 sprite("out_rope_coil", { ...S, w: 7, h: 4 },
   ball(3, 2, 3, "C", { ry: 1.6 }),
-  ellipse(3, 2, 2, 1, "C-1", true), px(3, 2, "C-2"), px(6, 3, "C"))
+  // coiled turns: a dark groove ring, the hole in the middle, the loose end
+  hline(1, 1, 5, "C-1"), px(1, 2, "C-1"), px(5, 2, "C-1"), hline(2, 2, 3, "C"), px(3, 2, "C-2"),
+  px(6, 3, "C"))
 sprite("out_pool_ladder", { ...S, w: 6, h: 10 },
-  tube(1, 9, 1, 2, 0.4, "z+1"), tube(4, 9, 4, 2, 0.4, "z+1"),
-  tube(1, 2, 2, 0, 0.4, "z+1"), tube(4, 2, 3, 0, 0.4, "z+1"),        // rails arch over the edge
-  block(2, 4, 2, 1, "z"), block(2, 6, 2, 1, "z"), block(2, 8, 2, 1, "z"))
+  // two rails that arch over the pool edge (top) and drop into the water, three treads
+  tube(1, 9, 1, 2, 0.3, "z+1"), tube(4, 9, 4, 2, 0.3, "z+1"),
+  tube(1, 2, 2, 0, 0.3, "z+1"), tube(4, 2, 5, 0, 0.3, "z+1"),
+  hline(2, 4, 2, "z"), hline(2, 6, 2, "z"), hline(2, 8, 2, "z"))
 sprite("out_towel_stack", { ...S, w: 8, h: 6 },
   block(0, 4, 8, 2, "o", { bevel: 1 }), block(1, 2, 7, 2, "t", { bevel: 1 }), block(0, 0, 8, 2, "e", { bevel: 1 }),
   vline(7, 0, 2, "e-1"), hline(1, 3, 6, "t+1"), px(2, 5, "o+1"), px(5, 5, "o+1"))
@@ -299,10 +303,12 @@ sprite("out_palm_potted", { ...S, w: 14, h: 22 },
 sprite("out_flower_bush", { ...S, w: 20, h: 12 },
   foliage(10, 7, 9, 5, "g", { flowers: "f", size: [2, 3], bloom: 0.6, seed: 4 }))
 sprite("out_hibiscus", { ...S, w: 10, h: 10 },
-  foliage(5, 5, 4, 4, "g", { size: [1.5, 2.5], seed: 6 }),
-  (c) => {
+  foliage(5, 5.5, 4, 3.5, "g", { size: [1.5, 2.5], count: 16, seed: 6 }),
+  (c) => {                                                             // three blossoms: 5 petals + stamen
     for (const [x, y] of [[3, 3], [7, 4], [5, 7]]) {
-      c.ball(x, y, 1.4, "u"); c.px(x, y, "y+1")
+      // painted blossom (keeps the bush's normals, so it shades with the clump under it)
+      for (const [dx, dy] of [[0, -1], [-1, 0], [1, 0], [0, 1], [1, 1], [-1, -1]]) c.px(x + dx, y + dy, "u")
+      c.px(x, y, "y+1")
     }
   })
 
@@ -318,10 +324,12 @@ sprite("out_stairs", { ...S, w: 24, h: 20 },
   bump("bevel", { on: "p", w: 1 }),
   line(1, 19, 23, 6, "p+1"),                                            // coping along the stringer
   hline(0, 19, 24, "p-2"),                                              // plinth
-  rect(15, 12, 3, 4, "p-2"), hline(15, 12, 3, "p-1"),                    // little vent
+  (c) => {                                                             // tread shadow under each nosing
+    for (let i = 1; i < 5; i++) c.hline(i * 5, 17 - i * 3 + 1, 24 - i * 5, "p-1")
+  },
   (c) => {
-    for (let i = 0; i < 5; i++) { const x = i * 5 + 2; c.vline(x, 17 - i * 3 - 6, 6, "e") }
-    c.line(2, 11, 22, -1, "e")
+    for (let i = 0; i < 5; i += 2) { const x = i * 5 + 2; c.vline(x, 17 - i * 3 - 5, 5, "e") }
+    c.line(2, 12, 22, 0, "e"); c.vline(22, 0, 3, "e")
   })
 
 // ---------------------------------------------------------------- hotel sign
@@ -348,3 +356,36 @@ sprite("out_sign_hotel", { ...S, w: 40, h: 16 },
   px(8, 10, "c+1"), px(8, 9, "c+1"), px(9, 8, "c+1"), px(9, 7, "c+1"),
   hline(6, 5, 3, "c+1"), px(5, 6, "c+1"), hline(10, 5, 3, "c+1"), px(13, 6, "c+1"),
   px(7, 4, "c+1"), px(11, 4, "c+1"), px(9, 6, "c+1"))
+
+// ---------------------------------------------------------------- overview sheet
+// All out_* sprites on sand in a flowing grid, then a 60px lagoon strip with the boat, rocks,
+// coral, seaweed and fish placed in the water.
+const SHEET = [
+  "out_umbrella", "out_umbrella_teal", "out_lounger", "out_tiki_bar", "out_stairs", "out_sign_hotel",
+  "out_palm_potted", "out_flower_bush", "out_hibiscus", "out_lifering", "out_lantern", "out_post",
+  "out_rope_coil", "out_pool_ladder", "out_towel_stack", "out_beach_ball",
+  "out_boat", "out_rock_a", "out_rock_b", "out_rock_c", "out_coral_fan", "out_coral_branch",
+  "out_coral_brain", "out_seaweed", "out_fish_yellow", "out_fish_blue", "out_fish_striped",
+]
+const SEA = ["q-2", "q-1", "q", "q+1", "q+2", "q+3", "q-3"]         // every tone of the water ramp
+const WY = 112                                                       // water surface row
+scene("out_sheet", { w: 240, h: 172, bg: "s+1" },
+  (c) => {
+    let x = 4, y = 4, hmax = 0
+    for (const n of SHEET) {
+      const img = c.asset(n)
+      if (x + img.w > c.w - 4) { x = 4; y += hmax + 4; hmax = 0 }
+      c.put(img, x, y); x += img.w + 4; hmax = Math.max(hmax, img.h)
+    }
+  },
+  // lagoon strip: the boat's hull bottom row (last row before its outline) sits on row WY - 1,
+  // so the water's top row is its waterline; water() then adds the reflection + foam.
+  stamp("out_boat", 8, WY - 23),
+  water(0, WY, 240, 60, "q", { depth: [0, -2], reflect: "*", reflectLen: 10, ripples: 0.18, seed: 3 }),
+  // shore rocks half sunk in the water
+  stamp("out_rock_c", 92, WY - 6), stamp("out_rock_a", 124, WY - 4), stamp("out_rock_b", 148, WY - 2),
+  foam(["z-3", "z-2", "z-1", "z", "z+1", "z+2", "v", "v-1"], { on: SEA, c: "e" }),
+  // sea floor: coral garden, seaweed and fish below the surface
+  stamp("out_coral_brain", 170, 160), stamp("out_coral_fan", 186, 156), stamp("out_coral_branch", 204, 158),
+  stamp("out_seaweed", 222, 154), stamp("out_seaweed", 162, 156, { flip: "x" }), stamp("out_coral_fan", 120, 158, { flip: "x" }),
+  stamp("out_fish_yellow", 186, 136), stamp("out_fish_blue", 206, 142, { flip: "x" }), stamp("out_fish_striped", 140, 140))
