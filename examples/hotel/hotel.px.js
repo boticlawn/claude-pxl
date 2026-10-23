@@ -2,6 +2,8 @@
 // Reference target: dense cozy Caribbean pixel art. Structure + environment live here; the props
 // come from props_room / props_outdoor / people.
 include("palette.px.js")
+include("props_room.px.js")
+include("people.px.js")
 
 const W = 480, H = 270
 // Building geometry
@@ -46,6 +48,76 @@ function railing(c, x0, x1, y) {
   c.block(x0, y - 7, x1 - x0, 2, "e", { bevel: 0 })
 }
 
+// ---------------------------------------------------------------- furnishing
+// Rooms: R[floor][room] = [x0, x1]; floors 0 = top, 2 = ground. Everything stands on f.floor.
+const R = (r) => [COLS[r] + 6, COLS[r + 1]]
+
+function furnish(c) {
+  const put = (n, x, y, o = {}) => c.stamp(n, x, y, { anchor: "b", ...o })
+  const hang = (n, x, y, o = {}) => c.stamp(n, x, y, { anchor: "t", ...o })
+  const shadowUnder = (x, fl, rx) => c.shadow(x, fl + 1, rx, 1, { soft: 0.6 })
+  const [f0, f1, f2] = FLOORS
+
+  // ---- top floor
+  { const [a, b] = R(0), m = (a + b) >> 1, fl = f0.floor
+    hang("room_fan", m, f0.top); hang("room_lamp_pendant", a + 10, f0.top); hang("room_lamp_pendant", b - 10, f0.top)
+    put("room_picture_wide", m, fl - 19)
+    shadowUnder(m, fl, 15); put("room_bed_double", m, fl + 1)
+    put("room_nightstand", m - 21, fl + 1); put("room_lamp_table", m - 21, fl - 8)
+    put("room_nightstand", m + 21, fl + 1); put("room_lamp_table", m + 21, fl - 8)
+    put("room_plant_big", b - 8, fl + 1); put("room_window_arch", a + 9, fl - 6); put("room_rug", m, fl + 2) }
+  { const [a, b] = R(1), m = (a + b) >> 1, fl = f0.floor
+    hang("room_fan", m, f0.top); hang("room_lamp_pendant", m - 22, f0.top)
+    put("room_wardrobe", a + 8, fl + 1)
+    put("room_bed_twin", m - 8, fl + 1); put("room_bed_twin", m + 16, fl + 1)
+    put("room_nightstand", m + 4, fl + 1); put("room_lamp_table", m + 4, fl - 8)
+    put("room_picture_tall", m - 8, fl - 18); put("room_picture_tall", m + 16, fl - 18)
+    put("room_door_arch", b - 9, fl + 1) }
+  { const [a, b] = R(2), m = (a + b) >> 1, fl = f0.floor
+    hang("room_lamp_pendant", m, f0.top); put("room_mirror_round", a + 12, fl - 18)
+    put("room_bed_double_coral", m - 6, fl + 1); put("room_nightstand", m + 15, fl + 1)
+    put("room_armchair", b - 10, fl + 1); put("room_plant_small", a + 6, fl + 1) }
+
+  // ---- middle floor
+  { const [a, b] = R(0), m = (a + b) >> 1, fl = f1.floor
+    hang("room_fan", m, f1.top); hang("room_lamp_pendant", a + 12, f1.top)
+    put("room_picture_wide", m + 4, fl - 19)
+    put("room_rug", m + 4, fl + 2); put("room_bed_double", m + 4, fl + 1, { swap: { t: "b" } })
+    put("room_nightstand", m - 17, fl + 1); put("room_lamp_table", m - 17, fl - 8)
+    put("room_plant_palm", a + 7, fl + 1); put("room_armchair", b - 9, fl + 1) }
+  { const [a, b] = R(1), m = (a + b) >> 1, fl = f1.floor
+    hang("room_fan", m + 8, f1.top)
+    put("room_bunk", m - 4, fl + 1); put("room_surfboard", m + 12, fl + 1); put("room_suitcase", m + 20, fl + 1)
+    put("room_shelf", a + 12, fl - 22); put("room_plant_small", a + 6, fl + 1)
+    put("room_window_arch", b - 10, fl - 6); put("ppl_kid", m + 27, fl + 1) }
+  { const [a, b] = R(2), m = (a + b) >> 1, fl = f1.floor
+    hang("room_lamp_pendant", m - 10, f1.top)
+    put("room_bed_double", m - 6, fl + 1, { swap: { t: "o" } })
+    put("room_plant_big", b - 6, fl + 1); put("room_picture_tall", m - 6, fl - 19) }
+
+  // ---- ground floor: lobby, breakfast, dining
+  { const [a, b] = R(0), m = (a + b) >> 1, fl = f2.floor
+    hang("room_lamp_pendant", m - 14, f2.top + 14); hang("room_lamp_pendant", m + 14, f2.top + 14)
+    put("room_shelf", m, fl - 24); put("room_plant_big", a + 8, fl + 1)
+    put("ppl_receptionist_wave", m, fl - 11)
+    put("room_desk_reception", m, fl + 1)
+    put("room_suitcase", b - 16, fl + 1); put("ppl_guest_c", b - 8, fl + 1) }
+  { const [a, b] = R(1), m = (a + b) >> 1, fl = f2.floor
+    hang("room_lamp_pendant", m - 18, f2.top + 14); hang("room_lamp_pendant", m + 18, f2.top + 14)
+    put("ppl_chef", m - 6, fl - 2)
+    put("room_buffet", m, fl + 1)
+    put("room_plant_small", a + 5, fl + 1); put("ppl_waiter", b - 8, fl + 1) }
+  { const [a, b] = R(2), m = (a + b) >> 1, fl = f2.floor
+    hang("room_lamp_pendant", m, f2.top + 14)
+    put("room_table_dining", a + 16, fl + 1); put("room_table_dining", a + 42, fl + 1)
+    put("ppl_guest_b", b - 10, fl + 1); put("room_plant_palm", b - 22, fl + 1) }
+
+  // ---- tower stairwell: plants in the arches
+  for (const f of FLOORS) c.stamp("room_plant_palm", BX0 + 23, f.floor + 1, { anchor: "b" })
+  // vines down a few pillars
+  for (const [x, f] of [[COLS[1], f0], [COLS[2], f1], [COLS[3], f0]]) c.stamp("room_vine", x + 3, f.top, { anchor: "t" })
+}
+
 // ---------------------------------------------------------------- the scene
 
 scene("hotel", { w: W, h: H, bg: "a" },
@@ -86,6 +158,7 @@ scene("hotel", { w: W, h: H, bg: "a" },
       room(c, BX0 + 4, TOWER, f, "p+1")                                         // tower rooms: pink stairwell
     })
   }),
+  layer("furniture", (c) => furnish(c)),
   layer("structure",
     // floor slabs and the roof slab
     (c) => {
@@ -121,7 +194,6 @@ scene("hotel", { w: W, h: H, bg: "a" },
       })
       c.hline(x0, f.top, w, "p+1")
     }
-    for (const f2 of FLOORS.slice(0, 2)) railing(c, COLS[COLS.length - 2] + 6, COLS[COLS.length - 1], f2.floor)
     railing(c, BX0 + 2, TOWER, 26)                     // roof terrace on the tower
   }, bump("bevel", { w: 1, on: "p" }), form()),
   wire(BX0 + 8, 20, BX1 - 8, 20, 7, "d-1", { hang: "_bulb", every: 9 }),
