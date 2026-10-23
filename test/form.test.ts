@@ -167,7 +167,7 @@ sprite("d", { w: 9, h: 9, form: true, outline: "auto" }, ball(4, 4, 4, "t"))`);
 });
 
 test("fine() paints one real pixel per char under detail(2)", () => {
-  const p = loadSource('detail(2); material("o", "#d0703c"); sprite("f", { w: 2, h: 1 }, rect(0, 0, 2, 1, "o"), fine(0, 0, "x.x", { x: "o-2" }))', "t.px.js");
+  const p = loadSource('detail(2); material("o", "#d0703c"); sprite("f", { w: 2, h: 2 }, rect(0, 0, 2, 2, "o"), fine(0, 0, "x.x", { x: "o-2" }))', "t.px.js");
   const img = p.image("f");
   assert.notEqual(img.get(0, 0), img.get(1, 0)); assert.equal(img.get(0, 0), img.get(2, 0)); assert.equal(img.get(0, 1), img.get(1, 0));
 });
