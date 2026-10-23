@@ -122,8 +122,8 @@ export function normalImage(img: Img): Img {
   const out = new Img(img.w, img.h), n = img.norm;
   for (let i = 0; i < img.data.length; i++) {
     if (img.data[i] === TRANSPARENT) continue;
-    const has = n && n[i * 3 + 2] > 0;
-    const nx = has ? n![i * 3] / 127 : 0, ny = has ? n![i * 3 + 1] / 127 : 0, nz = has ? n![i * 3 + 2] / 127 : 1;
+    const has = n && n[i * 3 + 2] !== 0;
+    const nx = has ? n![i * 3] / 127 : 0, ny = has ? n![i * 3 + 1] / 127 : 0, nz = has ? Math.abs(n![i * 3 + 2]) / 127 : 1;
     const b = (v: number) => Math.min(255, Math.max(0, Math.round((v * 0.5 + 0.5) * 255)));
     out.data[i] = pack(b(nx), b(-ny), b(nz), 255);
   }

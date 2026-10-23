@@ -117,7 +117,7 @@ export function applyLighting(img: Img, masks: LightMasks, lamps: Lamp[], o: Lig
   // to a flat surface (so flat normals match unmapped art); ambient is directionless.
   const nm = img.norm, lit: [number, number, number] = [0, 0, 0];
   const shaded = (x: number, y: number, i: number): [number, number, number] => {
-    const nx = nm![i * 3] / 127, ny = nm![i * 3 + 1] / 127, nz = nm![i * 3 + 2] / 127;
+    const nx = nm![i * 3] / 127, ny = nm![i * 3 + 1] / 127, nz = Math.abs(nm![i * 3 + 2]) / 127;
     lit[0] = a[0]; lit[1] = a[1]; lit[2] = a[2];
     for (const s of sources) {
       const v = sample(s.f, 1, x, y, 0);
@@ -139,7 +139,7 @@ export function applyLighting(img: Img, masks: LightMasks, lamps: Lamp[], o: Lig
   for (let y = 0; y < img.h; y++)
     for (let x = 0; x < img.w; x++) {
       const i = y * img.w + x;
-      const [lr, lg, lb] = relief && nm![i * 3 + 2] > 0 ? shaded(x, y, i) : [at(x, y, 0), at(x, y, 1), at(x, y, 2)];
+      const [lr, lg, lb] = relief && nm![i * 3 + 2] !== 0 ? shaded(x, y, i) : [at(x, y, 0), at(x, y, 1), at(x, y, 2)];
       map.data[i] = pack(byte(lr * 255), byte(lg * 255), byte(lb * 255));
       const c = img.data[i];
       if (c === TRANSPARENT || emit.has(c) || unlit?.[i]) {

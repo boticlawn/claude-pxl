@@ -3,8 +3,9 @@ import { Img } from "./image.ts";
 import type { Palette, Resolved } from "./palette.ts";
 import { PxError } from "./errors.ts";
 import { glyph, lineWidth } from "./font.ts";
-import type { BumpOpts, LampOpts, PlaceOpts, ScatterOpts, TextOpts, Timeline, TilemapOpts, WireOpts } from "./model.ts";
+import type { BallOpts, BlockOpts, BumpOpts, CylOpts, LampOpts, ShadowOpts, TubeOpts, PlaceOpts, ScatterOpts, TextOpts, Timeline, TilemapOpts, WireOpts } from "./model.ts";
 import { bump, dirOf, setNormal } from "./normals.ts";
+import { applyForm, type FormOpts } from "./form.ts";
 import { bayer, colorList, gridRows, hash, inPoly, polyBounds, type Region, regionPred, rng } from "./util.ts";
 
 /** How a canvas reaches other assets. */
@@ -493,6 +494,133 @@ export class Canvas {
     });
   }
 
+  // ---------------------------------------------------------------- form primitives
+
+  /** Plot c and give it surface normal (nx, ny, nz) (ny down, nz toward the viewer). */
+  private surf(x: number, y: number, c: Resolved, nx: number, ny: number, nz: number): void {
+    if (!this.plot(x, y, c)) return;
+    setNormal(this.img.normals(), (this.oy + Math.floor(y)) * this.img.w + this.ox + Math.floor(x), nx, ny, Math.max(0.05, nz));
+  }
+
+  /** Sphere / ellipsoid: center (cx, cy), radius r (ry for an oval). */
+  ball(cx: number, cy: number, r: number, c: string, opts: BallOpts = {}): void {
+    const col = this.color(c), rx = r, ry = opts.ry ?? r, d = opts.depth ?? 1;
+    if (!(rx > 0 && ry > 0)) throw new PxError(`ball: radius must be > 0`);
+    for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++)
+      for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) {
+        const dx = (x - cx) / (rx + 0.5), dy = (y - cy) / (ry + 0.5), q = dx * dx + dy * dy;
+        if (q > 1) continue;
+        this.surf(x, y, col, dx * d, dy * d, Math.sqrt(1 - q));
+      }
+  }
+
+  /**
+   * Cylinder (barrels, pots, pillars, trunks, posts): box (x, y, w, h). `cap` = height of the visible
+   * top ellipse (0 = seen straight from the side), `bulge` = px the middle swells, dir "h" lies down.
+   */
+  cyl(x: number, y: number, w: number, h: number, c: string, opts: CylOpts = {}): void {
+    const col = this.color(c), capC = opts.capColor ? this.color(opts.capColor) : col;
+    const cap = Math.max(0, Math.round(opts.cap ?? 0)), bulge = opts.bulge ?? 0, taper = opts.taper ?? 0;
+    const horiz = opts.dir === "h";
+    const W = horiz ? h : w, H = horiz ? w : h;
+    const put = (u: number, v: number, cc: Resolved, nu: number, nv: number, nz: number) =>
+      horiz ? this.surf(x + v, y + u, cc, nv, nu, nz) : this.surf(x + u, y + v, cc, nu, nv, nz);
+    const half = W / 2;
+    for (let v = 0; v < H; v++) {
+      const tv = H > 1 ? v / (H - 1) : 0;
+      const hw = half + Math.sin(tv * Math.PI) * bulge - taper * tv;
+      // Bottom edge follows the cap's ellipse so the base looks round, not cut off.
+      for (let u = Math.floor(half - hw); u < Math.ceil(half + hw); u++) {
+        const a = (u + 0.5 - half) / hw;
+        if (Math.abs(a) > 1) continue;
+        if (cap && v > H - 1 - cap) {
+          const e = (v - (H - 1 - cap)) / (cap + 0.5);
+          if (a * a + e * e > 1) continue;
+        }
+        if (cap && v < cap * 2) {
+          const e = (v - cap) / (cap + 0.5);
+          if (v < cap && a * a + e * e > 1) continue;
+          if (a * a + e * e <= 1) { put(u, v, capC, a * 0.25, -0.9, 0.45); continue; }
+        }
+        // Slope of the bulge tilts the normal up/down a little.
+        const slope = (Math.cos(tv * Math.PI) * bulge * Math.PI) / Math.max(1, H) - taper / Math.max(1, H);
+        put(u, v, col, a, -slope * 0.8, Math.sqrt(Math.max(0, 1 - a * a)));
+      }
+    }
+  }
+
+  /**
+   * Box seen from the front with an optional top face (`top` px tall) and side face (`side` px wide,
+   * on the right unless sideAt: "l"), in oblique projection; `bevel` rounds the front edges.
+   * The whole thing fits (x, y, w + side, h).
+   */
+  block(x: number, y: number, w: number, h: number, c: string, opts: BlockOpts = {}): void {
+    const col = this.color(c);
+    const topC = opts.topColor ? this.color(opts.topColor) : col, sideC = opts.sideColor ? this.color(opts.sideColor) : col;
+    const top = Math.max(0, Math.round(opts.top ?? 0)), side = Math.max(0, Math.round(opts.side ?? 0));
+    const bev = Math.max(0, opts.bevel ?? 1), left = opts.sideAt === "l";
+    const fx = left ? x + side : x, fy = y + top, fh = h - top;
+    // front
+    for (let yy = 0; yy < fh; yy++)
+      for (let xx = 0; xx < w; xx++) {
+        let nx = 0, ny = 0.06;
+        if (bev) {
+          const dl = xx, dr = w - 1 - xx, dt = yy, db = fh - 1 - yy;
+          if (dl < bev) nx -= 0.7 * (1 - dl / bev); if (dr < bev) nx += 0.7 * (1 - dr / bev);
+          if (dt < bev) ny -= 0.7 * (1 - dt / bev); if (db < bev) ny += 0.7 * (1 - db / bev);
+        }
+        this.surf(fx + xx, fy + yy, col, nx, ny, 1);
+      }
+    // top face: rows above the front, sheared toward the side face
+    for (let r = 0; r < top; r++) {
+      const sh = top ? Math.round((side * (top - r)) / top) : 0;
+      const x0 = left ? fx - sh : fx + sh;
+      for (let xx = 0; xx < w; xx++) this.surf(x0 + xx, y + r, topC, 0, -1, 0.32);
+    }
+    // side face
+    for (let k = 0; k < side; k++) {
+      const lift = side ? Math.round((top * (k + 1)) / side) : 0;
+      const sx = left ? fx - 1 - k : fx + w + k;
+      for (let yy = -lift; yy < fh - lift; yy++) this.surf(sx, fy + yy, sideC, left ? -1 : 1, 0.05, 0.4);
+    }
+  }
+
+  /** Round tube / capsule from (x0, y0) to (x1, y1), radius r (r1 at the end): limbs, pipes, branches. */
+  tube(x0: number, y0: number, x1: number, y1: number, r: number, c: string, opts: TubeOpts = {}): void {
+    const col = this.color(c), r1 = opts.r1 ?? r, R = Math.max(r, r1);
+    const dx = x1 - x0, dy = y1 - y0, len2 = dx * dx + dy * dy || 1;
+    for (let y = Math.floor(Math.min(y0, y1) - R - 1); y <= Math.ceil(Math.max(y0, y1) + R + 1); y++)
+      for (let x = Math.floor(Math.min(x0, x1) - R - 1); x <= Math.ceil(Math.max(x0, x1) + R + 1); x++) {
+        const t = Math.max(0, Math.min(1, ((x - x0) * dx + (y - y0) * dy) / len2));
+        const vx = x - (x0 + dx * t), vy = y - (y0 + dy * t), rt = r + (r1 - r) * t + 0.5;
+        const q = (vx * vx + vy * vy) / (rt * rt);
+        if (q > 1) continue;
+        this.surf(x, y, col, vx / rt, vy / rt, Math.sqrt(1 - q));
+      }
+  }
+
+  /** Shade everything on this canvas that has an unshaded surface (see form.ts). */
+  form(opts: FormOpts & { where?: Region } = {}): void {
+    const { w } = this.img, inside = opts.where === undefined ? undefined : regionPred(opts.where);
+    const keys = opts.on ? this.maskAt(opts.on) : undefined;
+    applyForm(this.img, this.pal, opts, (i) => {
+      const x = (i % w) - this.ox, y = Math.floor(i / w) - this.oy;
+      return (!inside || inside(x, y)) && (!keys || keys(x, y)) && (!this.clipPred || this.clipPred(x, y));
+    });
+  }
+
+  /** Soft contact / drop shadow: step what's here darker inside an ellipse, dithered at the rim. */
+  shadow(cx: number, cy: number, rx: number, ry: number, opts: ShadowOpts = {}): void {
+    const steps = opts.steps ?? 1, soft = Math.max(0, Math.min(1, opts.soft ?? 0.45));
+    const map = this.pal.stepMap(-1), keys = opts.on ? this.maskAt(opts.on) : undefined;
+    const e = (x: number, y: number) => ((x - cx) / (rx + 0.5)) ** 2 + ((y - cy) / (ry + 0.5)) ** 2;
+    const core = (x: number, y: number) => e(x, y) <= 1 - soft && (!keys || keys(x, y));
+    const rim = (x: number, y: number) => { const v = e(x, y); return v > 1 - soft && v <= 1 && (!keys || keys(x, y)); };
+    this.remap(map, core, steps, 1);
+    this.remap(map, rim, steps, 0.5);
+    if (steps > 1) this.remap(map, (x, y) => e(x, y) <= (1 - soft) * 0.45 && (!keys || keys(x, y)), 1, 0.5);
+  }
+
   /** Text in the built-in 3x5 font. */
   text(x: number, y: number, s: string, c: string, opts: TextOpts = {}): void {
     s = String(s);
@@ -531,6 +659,7 @@ export const OPS = [
   "px", "rect", "box", "line", "hline", "vline", "ellipse", "circ", "ring", "poly", "fill",
   "dither", "grad", "noise", "recolor", "shade", "light",
   "stamp", "tile", "pattern", "tilemap", "scatter", "grid", "wire", "text", "lamp", "bump", "normals",
+  "ball", "cyl", "block", "tube", "form", "shadow",
 ] as const;
 export type OpName = (typeof OPS)[number];
 

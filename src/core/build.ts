@@ -5,6 +5,7 @@ import { type Color, TRANSPARENT } from "./color.ts";
 import { PxError, wrap } from "./errors.ts";
 import { Img } from "./image.ts";
 import { applyGlow } from "./glow.ts";
+import { applyForm, selout } from "./form.ts";
 import { applyLighting } from "./light.ts";
 import { normalImage } from "./normals.ts";
 import { type AssetDef, type FrameOpts, type GlowOpts, type Item, type Layer, type LayerOpts, type LightingOpts, type Op, type Timeline, isLayer, isOp } from "./model.ts";
@@ -287,7 +288,13 @@ function finish(img: Img, def: AssetDef, pal: Palette, trace?: Trace): Img {
   }
   if (o.flip) step(`flip ${o.flip}`, () => img.flip(o.flip!));
   if (o.rot) step(`rot ${o.rot}`, () => img.rot(o.rot!));
-  if (o.outline) step(`outline ${o.outline}`, () => img.outline(solid(pal, o.outline!), false));
+  if (o.form) {
+    const fo = o.form === true ? {} : o.form;
+    step("form", () => { applyForm(img, pal, fo); });
+  }
+  const light = o.form && o.form !== true ? o.form.light : undefined;
+  if (o.outline === "auto") step("outline auto", () => selout(img, pal, light, pal.keys.get("k")));
+  else if (o.outline) step(`outline ${o.outline}`, () => img.outline(solid(pal, o.outline!), false));
   if (o.outline8) step(`outline8 ${o.outline8}`, () => img.outline(solid(pal, o.outline8!), true));
   if (o.crop) step("crop", () => img.crop());
   return img;

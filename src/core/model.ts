@@ -49,8 +49,11 @@ export interface AssetOpts {
   swap?: Record<string, string>;
   flip?: "x" | "y" | "xy";
   rot?: 90 | 180 | 270;
+  /** Outline color, or "auto" for a selective outline (darkest tone of what it borders). */
   outline?: string;
   outline8?: string;
+  /** Form-shade the finished asset (after mirror/flip/rot, before outline). */
+  form?: boolean | import("./form.ts").FormOpts;
   crop?: boolean;
   /** Also export each layer as its own PNG. */
   layers?: boolean;
@@ -223,6 +226,53 @@ export interface GlowOpts {
   bands?: number;
   /** Ramp mode: step neighbours up to this many shades lighter along the ramps (stays in palette). */
   ramp?: number;
+}
+
+export interface BallOpts {
+  /** Vertical radius (oval); default r. */
+  ry?: number;
+  /** How strongly the sides curve away, 0..1+ (default 1; lower = flatter, like a cushion). */
+  depth?: number;
+}
+
+export interface CylOpts {
+  /** Height of the visible top ellipse in px (0 = pure side view). */
+  cap?: number;
+  /** Color of the top face (default: the body color). */
+  capColor?: string;
+  /** Px the middle swells (barrels, vases). */
+  bulge?: number;
+  /** Px each side narrows toward the bottom (pots, cups; negative widens). */
+  taper?: number;
+  /** "v" standing (default), "h" lying (logs, pipes): w/h stay the box size. */
+  dir?: "v" | "h";
+}
+
+export interface BlockOpts {
+  /** Height of the top face in px (0 = none). */
+  top?: number;
+  /** Width of the side face in px (0 = none). */
+  side?: number;
+  /** "r" (default) or "l". */
+  sideAt?: "r" | "l";
+  /** Px of rounded edge on the front face (default 1, 0 = sharp). */
+  bevel?: number;
+  topColor?: string;
+  sideColor?: string;
+}
+
+export interface TubeOpts {
+  /** Radius at the end point (default: same as the start). */
+  r1?: number;
+}
+
+export interface ShadowOpts {
+  /** Ramp steps darker (default 1). */
+  steps?: number;
+  /** Fraction of the radius that dithers out (default 0.45). */
+  soft?: number;
+  /** Only darken these keys. */
+  on?: string;
 }
 
 export interface TextOpts {
