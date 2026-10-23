@@ -293,11 +293,7 @@ function finish(img: Img, def: AssetDef, pal: Palette, trace?: Trace): Img {
   if (o.swap) {
     const sw = o.swap;
     step(`swap ${fmtArgs([sw])}`, () => {
-      const m = new Map<Color, Color>();
-      for (const k of Object.keys(sw)) {
-        const a = pal.resolve(k), b = pal.resolve(sw[k]);
-        if (a !== null && b !== null) m.set(a, b);
-      }
+      const m = pal.swapMap(sw);
       return img.remap(m);
     });
   }

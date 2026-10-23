@@ -154,6 +154,27 @@ export class Palette {
     return r.ramp[Math.max(0, Math.min(r.ramp.length - 1, r.i + Number(m[2])))];
   }
 
+  /**
+   * Color map for swap / recolor. When both sides are on ramps (materials), the whole ramp is
+   * swapped step by step, aligned at the two keys: { h: "H" } recolors h-2..h+1 to H-2..H+1, so
+   * variants work after form shading.
+   */
+  swapMap(swap: Record<string, string>): Map<Color, Color> {
+    const m = new Map<Color, Color>();
+    for (const from of Object.keys(swap)) {
+      const a = this.resolve(from), b = this.resolve(swap[from]);
+      if (a === null || b === null) continue;
+      const ra = this.rampOf(a), rb = this.rampOf(b);
+      if (ra && rb && ra.ramp !== rb.ramp) {
+        ra.ramp.forEach((c, i) => {
+          if (!m.has(c)) m.set(c, rb.ramp[Math.max(0, Math.min(rb.ramp.length - 1, rb.i + i - ra.i))]);
+        });
+      }
+      m.set(a, b);
+    }
+    return m;
+  }
+
   /** Map color -> darker (dir -1) or lighter (dir +1) neighbour along the ramps. */
   stepMap(dir: -1 | 1): Map<Color, Color> {
     if (!this.ramps.length) throw new PxError('no ramps defined: add ramps("kDdu", ...) (dark -> light) after pal()');

@@ -141,6 +141,8 @@ export interface PlaceOpts {
   delay?: number;
   /** Animated assets: random start time per placement (true), seeded like other picks. */
   rdelay?: boolean;
+  /** stamp: which point of the sprite (x, y) is: "tl" (default), "t", "tr", "l", "c", "r", "bl", "b", "br". */
+  anchor?: "tl" | "t" | "tr" | "l" | "c" | "r" | "bl" | "b" | "br";
 }
 
 export interface ScatterOpts extends PlaceOpts {

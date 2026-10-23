@@ -81,6 +81,15 @@ Where to call it:
 
 All take `seed` to reroll.
 
+## Placing by the feet
+
+`stamp("room_bed_double", 120, 80, { anchor: "b" })` puts the sprite's bottom-center at (120, 80):
+props stand on a floor line without knowing their size (outline included). Anchors: `tl` (default),
+`t`, `tr`, `l`, `c`, `r`, `bl`, `b`, `br`.
+
+`swap` / `rswap` / `recolor` between two materials swap the whole ramp step by step:
+`{ base: "guest", swap: { h: "H", t: "o" } }` makes a variant even after form shading.
+
 ## Space: haze and layers
 
 `layer("far", { haze: 0.45, hazeColor: "a+1" }, ...)` pushes a layer toward the sky color

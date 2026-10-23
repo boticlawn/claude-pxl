@@ -90,3 +90,12 @@ test("sprites without grids or size take the size of what they paint", () => {
   assert.equal(img.w, 7);
   assert.equal(img.h, 10);
 });
+
+test("swap between materials swaps every step, so variants survive form shading", () => {
+  const p = load(`
+material("t", "#1fa39a")
+sprite("b", { w: 15, h: 15, form: true }, ball(7, 7, 7, "o"))
+sprite("c", { base: "b", swap: { o: "t" } })`);
+  const img = p.image("c"), teal = new Set(materialRamp(parseHex("#1fa39a")!).ramp);
+  for (let i = 0; i < img.data.length; i++) if (img.data[i] !== TRANSPARENT) assert.ok(teal.has(img.data[i]), "all pixels moved to the teal ramp");
+});

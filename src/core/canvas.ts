@@ -298,13 +298,9 @@ export class Canvas {
   }
 
   swapMap(swap: Record<string, string>): Map<Color, Color> {
-    const m = new Map<Color, Color>();
-    for (const from of Object.keys(swap)) {
-      const a = this.color(from), b = this.color(swap[from]);
-      if (a !== null && b !== null) m.set(a, b);
-    }
-    return m;
+    return this.pal.swapMap(swap);
   }
+
 
   // ---------------------------------------------------------------- assets
 
@@ -367,7 +363,12 @@ export class Canvas {
   }
 
   stamp(name: string, x = 0, y = 0, opts?: PlaceOpts): void {
-    this.put(this.asset(name, opts, x, y), x, y);
+    const src = this.asset(name, opts, x, y);
+    const a = opts?.anchor ?? "tl";
+    // anchor: which point of the sprite (x, y) refers to. "b" = bottom-center (feet, pots, posts).
+    const ax = a.includes("l") ? 0 : a.includes("r") ? src.w - 1 : Math.floor(src.w / 2);
+    const ay = a.startsWith("t") ? 0 : a.startsWith("b") ? src.h - 1 : a === "l" || a === "r" || a === "c" ? Math.floor(src.h / 2) : 0;
+    this.put(src, x - ax, y - ay);
   }
 
   tile(name: string, x: number, y: number, cols = 1, rows = 1, opts?: PlaceOpts): void {
