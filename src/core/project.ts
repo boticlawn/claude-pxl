@@ -54,6 +54,14 @@ export const SIGNATURES: Record<string, string> = {
   tube: "x0:n y0:n x1:n y1:n r:n c:c ?opts:o",
   form: "?opts:o",
   shadow: "cx:n cy:n rx:n ry:n ?opts:o",
+  water: "x:n y:n w:n h:n c:c ?opts:o",
+  reflect: "x:n y:n w:n len:n ?opts:o",
+  foam: "around:S ?opts:o",
+  caustics: "x:n y:n w:n h:n ?opts:o",
+  palm: "x:n y:n ?opts:o",
+  foliage: "cx:n cy:n rx:n ry:n c:c ?opts:o",
+  cloud: "x:n y:n w:n h:n c:c ?opts:o",
+  mountain: "x:n baseY:n w:n h:n c:c ?opts:o",
   glow: "keys:S ?opts:o",
 };
 
@@ -72,6 +80,14 @@ const OP_OPTS: Record<string, string[]> = {
   tube: ["r1"],
   form: FORM_OPTS.concat(["where"]),
   shadow: ["steps", "soft", "on"],
+  water: ["depth", "shadow", "ripples", "len", "glints", "reflect", "reflectLen", "foam", "seed"],
+  reflect: ["keys", "on", "steps", "seed"],
+  foam: ["on", "c", "keep", "seed"],
+  caustics: ["scale", "width", "steps", "on", "seed"],
+  palm: ["h", "lean", "trunk", "leaf", "fronds", "len", "nuts", "seed"],
+  foliage: ["size", "count", "flowers", "bloom", "tips", "seed"],
+  cloud: ["puffs", "seed"],
+  mountain: ["rough", "peak", "gullies", "seed"],
 };
 
 const ASSET_OPTS: Record<AssetKind, string[]> = {
@@ -82,7 +98,7 @@ const ASSET_OPTS: Record<AssetKind, string[]> = {
 const FRAME_OPTS = ["ms", "hold"];
 /** Longest loop a combined timeline may have (ms); longer ones are cut. */
 const MAX_LOOP = 60000;
-const LAYER_OPTS = ["x", "y", "hidden", "shade", "light", "density", "solid", "wall", "unlit"];
+const LAYER_OPTS = ["x", "y", "hidden", "shade", "light", "density", "solid", "wall", "unlit", "haze", "hazeColor"];
 const SHEET_OPTS = ["cols", "pad"];
 
 function checkArgs(name: string, args: unknown[]): void {

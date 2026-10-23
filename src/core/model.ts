@@ -27,6 +27,10 @@ export interface LayerOpts {
   wall?: boolean;
   /** Pixels this layer leaves visible ignore lighting (skies, backdrops). */
   unlit?: boolean;
+  /** Aerial perspective: push the layer this far (0..1) toward hazeColor before compositing. */
+  haze?: number;
+  /** Haze color: key or "#hex" (default: a pale sky blue). */
+  hazeColor?: string;
 }
 
 export interface Layer {

@@ -6,6 +6,7 @@ import { glyph, lineWidth } from "./font.ts";
 import type { BallOpts, BlockOpts, BumpOpts, CylOpts, LampOpts, ShadowOpts, TubeOpts, PlaceOpts, ScatterOpts, TextOpts, Timeline, TilemapOpts, WireOpts } from "./model.ts";
 import { bump, dirOf, setNormal } from "./normals.ts";
 import { applyForm, type FormOpts } from "./form.ts";
+import * as N from "./nature.ts";
 import { bayer, colorList, gridRows, hash, inPoly, polyBounds, type Region, regionPred, rng } from "./util.ts";
 
 /** How a canvas reaches other assets. */
@@ -497,7 +498,7 @@ export class Canvas {
   // ---------------------------------------------------------------- form primitives
 
   /** Plot c and give it surface normal (nx, ny, nz) (ny down, nz toward the viewer). */
-  private surf(x: number, y: number, c: Resolved, nx: number, ny: number, nz: number): void {
+  surf(x: number, y: number, c: Resolved, nx: number, ny: number, nz: number): void {
     if (!this.plot(x, y, c)) return;
     setNormal(this.img.normals(), (this.oy + Math.floor(y)) * this.img.w + this.ox + Math.floor(x), nx, ny, Math.max(0.05, nz));
   }
@@ -621,6 +622,17 @@ export class Canvas {
     if (steps > 1) this.remap(map, (x, y) => e(x, y) <= (1 - soft) * 0.45 && (!keys || keys(x, y)), 1, 0.5);
   }
 
+  // ---------------------------------------------------------------- environment brushes (nature.ts)
+
+  water(x: number, y: number, w: number, h: number, c: string, opts: N.WaterOpts = {}): void { N.water(this, x, y, w, h, c, opts); }
+  reflect(x: number, y: number, w: number, len: number, opts: N.ReflectOpts = {}): void { N.reflect(this, x, y, w, len, opts); }
+  foam(around: string, opts: N.FoamOpts = {}): void { N.foam(this, around, opts); }
+  caustics(x: number, y: number, w: number, h: number, opts: N.CausticsOpts = {}): void { N.caustics(this, x, y, w, h, opts); }
+  palm(x: number, y: number, opts: N.PalmOpts = {}): void { N.palm(this, x, y, opts); }
+  foliage(cx: number, cy: number, rx: number, ry: number, c: string, opts: N.FoliageOpts = {}): void { N.foliage(this, cx, cy, rx, ry, c, opts); }
+  cloud(x: number, y: number, w: number, h: number, c: string, opts: N.CloudOpts = {}): void { N.cloud(this, x, y, w, h, c, opts); }
+  mountain(x: number, baseY: number, w: number, h: number, c: string, opts: N.MountainOpts = {}): void { N.mountain(this, x, baseY, w, h, c, opts); }
+
   /** Text in the built-in 3x5 font. */
   text(x: number, y: number, s: string, c: string, opts: TextOpts = {}): void {
     s = String(s);
@@ -660,6 +672,7 @@ export const OPS = [
   "dither", "grad", "noise", "recolor", "shade", "light",
   "stamp", "tile", "pattern", "tilemap", "scatter", "grid", "wire", "text", "lamp", "bump", "normals",
   "ball", "cyl", "block", "tube", "form", "shadow",
+  "water", "reflect", "foam", "caustics", "palm", "foliage", "cloud", "mountain",
 ] as const;
 export type OpName = (typeof OPS)[number];
 

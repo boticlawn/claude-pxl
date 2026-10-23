@@ -73,7 +73,7 @@ export interface MaterialOpts {
   shift?: number;
   /** Lightness of the darkest tone, OKLab L 0..1 (default: base - 0.42, at least 0.14). */
   dark?: number;
-  /** Lightness of the lightest tone (default: base + 0.3, at most 0.97). */
+  /** Lightness of the lightest tone (default: base + 0.26, at most 0.96). */
   light?: number;
   /** Hue shadows rotate toward (default 265, blue-violet). */
   cool?: number;
@@ -88,7 +88,7 @@ export function materialRamp(base: Color, o: MaterialOpts = {}): { ramp: Color[]
   const [L, C, h] = toOklch(base);
   const shift = o.shift ?? 1;
   const dark = o.dark ?? Math.max(0.14, Math.min(L - 0.12, L - 0.42));
-  const light = o.light ?? Math.min(0.97, Math.max(L + 0.08, L + 0.3));
+  const light = o.light ?? Math.min(0.96, Math.max(L + 0.08, L + 0.26));
   const ramp: Color[] = [];
   for (let i = 0; i < n; i++) {
     if (i === at) { ramp.push(base); continue; }
@@ -102,7 +102,7 @@ export function materialRamp(base: Color, o: MaterialOpts = {}): { ramp: Color[]
       const t = (i - at) / Math.max(1, n - 1 - at); // 0 at base .. 1 lightest
       const Li = L + (light - L) * t;
       // Lights: hue toward warm, chroma drops so highlights don't go neon.
-      const Ci = C * (1 - 0.55 * t);
+      const Ci = C * (1 - 0.38 * t);
       ramp.push(fromOklch(Li, Math.max(0, Ci), toward(h, o.warm ?? 90, 0.22 * t * shift)));
     }
   }

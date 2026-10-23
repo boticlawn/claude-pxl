@@ -6,6 +6,7 @@ import { PxError, wrap } from "./errors.ts";
 import { Img } from "./image.ts";
 import { applyGlow } from "./glow.ts";
 import { applyForm, selout } from "./form.ts";
+import { hazeImg } from "./nature.ts";
 import { applyLighting } from "./light.ts";
 import { normalImage } from "./normals.ts";
 import { type AssetDef, type FrameOpts, type GlowOpts, type Item, type Layer, type LayerOpts, type LightingOpts, type Op, type Timeline, isLayer, isOp } from "./model.ts";
@@ -309,6 +310,12 @@ function solid(pal: Palette, spec: string): Color {
 /** Composite a layer onto img: draw it, or (shade/light) step what's below where it's opaque. */
 export function blend(img: Img, limg: Img, l: LayerOpts, pal: Palette): void {
   if (limg.lamps?.length) (img.lamps ??= []).push(...limg.lamps);
+  if (l.haze) {
+    const hc = pal.resolve(l.hazeColor ?? "#bcd6ee");
+    if (hc === null || hc === TRANSPARENT) throw new PxError(`hazeColor must be a visible color, got '${l.hazeColor}'`);
+    limg = limg.copy();
+    hazeImg(limg.data, hc, Math.max(0, Math.min(1, l.haze)));
+  }
   const density = l.density ?? 1;
   const mode = l.shade ?? l.light;
   if (mode === undefined || mode === false) {
