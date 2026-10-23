@@ -13,7 +13,8 @@ Never hand-place `shade()` regions to fake volume.
 writing logical coordinates. Positions and sizes scale, so curves, form shading, palms, foliage,
 water and textures get twice the detail; **1px lengths stay 1px** (outlines, seams, rails, cords),
 which is what makes the result look finer rather than just bigger. Radii (`ball`, `tube`, `circ`,
-`dome`, `r:` options) always scale. Single pixels (`px`, grid
+`dome`, `r:` options) always scale, except a `tube` radius of 0.5 or less: that's a hairline of one
+real pixel (ropes, rails, poles, seaweed). Single pixels (`px`, grid
 chars, `c.plot`/`c.surf` from your own functions) become k x k blocks, so hand-drawn pixel art keeps
 its shape. Use 2 for detailed scenes (e.g. a 480x270 layout rendered at 960x540); props built for
 detail 1 work unchanged.
@@ -55,7 +56,7 @@ They paint the base color *and* a surface normal per pixel.
 | `block(x, y, w, h, c, { top, side, sideAt, bevel, topColor, sideColor })` | box: front face + `top` px top face + `side` px side face (oblique); `bevel` rounds the front edges |
 | `tube(x0, y0, x1, y1, r, c, { r1 })` | capsule along a line, tapering to `r1` (limbs, branches, pipes, ropes) |
 | `oval(x, y, w, h, c, { depth })` | ellipsoid filling a box exactly (heads, eggs, fruit: easier than `ball` for even sizes) |
-| `dome(cx, by, rx, ry, c, { scallop })` | half ellipsoid on a flat base at row `by` (umbrellas, domes, mushroom caps, lamp shades); `scallop` = wavy rim |
+| `dome(cx, by, rx, ry, c, { scallop, phase })` | half ellipsoid on a flat base at row `by` (umbrellas, domes, mushroom caps, lamp shades); `scallop` = wavy rim |
 | `bump("dome" \| "bevel" \| "luma")` | give normals to anything already drawn (from lighting.md) |
 | `arch(x, y, w, h, c, ring?)` | flat shape: rectangle with a half-ellipse top (windows, doors, arcades) |
 
@@ -101,6 +102,7 @@ shelves of jars, rows of plants).
 
 ## Edges
 
+- `outlineHoles: false` (sprite option): outline only the outer silhouette; holes stay open (lattices, nets, sea fans, rings).
 - `outlineOpen: "b"` (sprite option): no outline on those sides (`t b l r`), for things standing in water or cut by a frame.
 - `outline: "auto"` (sprite option): selective outline. 1px lines (cords, rods) stay 1px, narrow gaps inside an object stay open. Each outline pixel takes the darkest tone of the material it borders, one step lighter on the lit side. Outlines get colored, not black.
 - `ink("#3a2622", { mix, inner })` (top of the file): line-art look. Every `outline: "auto"` is pulled toward one warm line color (`mix` 0..1, default 0.65; less on the lit side), and wherever two *different materials* meet inside a sprite (pillow on blanket, frame around a picture) the darker side gets an inner contour line (`inner` 0..1, default 0.7). Shading steps of one material never get lines. `ink(false)` turns it off. Per sprite: `ink: false` (no ink), `ink: 0.3` (lighter lines, e.g. foliage), `inner: false` / `inner: 0.4`, and `innerSkip: "a*q*"` for painted decoration that shouldn't get contours (a picture's sky and sea, stickers). `swap` variants recolor ink lines too.

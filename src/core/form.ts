@@ -268,8 +268,24 @@ export function innerLines(img: Img, pal: Palette, ink: Ink, skip?: Set<Color>):
   img.data.set(out);
 }
 
-export function selout(img: Img, pal: Palette, light: LightSpec = "tl", open = "", ink?: Ink): Img {
+export function selout(img: Img, pal: Palette, light: LightSpec = "tl", open = "", ink?: Ink, holes = true): Img {
   const src = img.pad(1), o = src.copy();
+  // holes = false: only transparent pixels connected to the border (the outside) get outline.
+  let outside: Uint8Array | undefined;
+  if (!holes) {
+    outside = new Uint8Array(src.w * src.h);
+    const st: number[] = [0];
+    outside[0] = 1;
+    while (st.length) {
+      const q = st.pop()!, qx = q % src.w, qy = (q - qx) / src.w;
+      for (const [ax, ay] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = qx + ax, ny = qy + ay;
+        if (nx < 0 || ny < 0 || nx >= src.w || ny >= src.h) continue;
+        const ni = ny * src.w + nx;
+        if (!outside[ni] && src.data[ni] === TRANSPARENT) { outside[ni] = 1; st.push(ni); }
+      }
+    }
+  }
   const skip = (x: number, y: number) => (open.includes("b") && y === src.h - 1) || (open.includes("t") && y === 0)
     || (open.includes("l") && x === 0) || (open.includes("r") && x === src.w - 1);
   const L = lightDir(light);
@@ -277,7 +293,7 @@ export function selout(img: Img, pal: Palette, light: LightSpec = "tl", open = "
   const dirs: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
   for (let y = 0; y < src.h; y++)
     for (let x = 0; x < src.w; x++) {
-      if (op(x, y) || skip(x, y)) continue;
+      if (op(x, y) || skip(x, y) || (outside && !outside[y * src.w + x])) continue;
       // Narrow gaps inside an object (between bunk levels, chair and table) stay open.
       if ((op(x - 1, y) && (op(x + 1, y) || op(x + 2, y))) || (op(x, y - 1) && (op(x, y + 1) || op(x, y + 2)))) continue;
       let best: Color | undefined, litSide = 0, cnt = 0;

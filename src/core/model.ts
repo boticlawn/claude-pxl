@@ -56,6 +56,8 @@ export interface AssetOpts {
   /** Outline color, or "auto" for a selective outline (darkest tone of what it borders). */
   outline?: string;
   outline8?: string;
+  /** false: outline only the outer silhouette; holes (lattices, nets, rings) stay open. */
+  outlineHoles?: boolean;
   /** Sides that get no outline ("b" = bottom: things standing in water or cut by a frame). */
   outlineOpen?: string;
   /** false: ignore the project's ink() for this asset; a number overrides its mix (0.3 = light lines for foliage). */
@@ -290,6 +292,8 @@ export interface BlockOpts {
 export interface DomeOpts {
   /** Width of each scallop hanging under the rim in px (0 = straight rim). */
   scallop?: number;
+  /** Shift the scallops sideways in px (line them up with stripes). */
+  phase?: number;
   depth?: number;
 }
 

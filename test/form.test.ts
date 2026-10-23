@@ -171,3 +171,13 @@ test("fine() paints one real pixel per char under detail(2)", () => {
   const img = p.image("f");
   assert.notEqual(img.get(0, 0), img.get(1, 0)); assert.equal(img.get(0, 0), img.get(2, 0)); assert.equal(img.get(0, 1), img.get(1, 0));
 });
+
+test("outlineHoles: false keeps holes open; hairline tubes stay 1 real px under detail", () => {
+  const p = load(`sprite("r", { w: 7, h: 7, outline: "auto", outlineHoles: false }, ring(3, 3, 3, "o"))`);
+  const r = p.image("r");
+  assert.equal(r.get(4, 4), TRANSPARENT, "center of the ring stays open");
+  const q = loadSource('detail(2); material("o", "#d0703c"); sprite("t", { w: 4, h: 6 }, tube(2, 0, 2, 5, 0.5, "o"))', "t.px.js").image("t");
+  let wmax = 0;
+  for (let y = 2; y < 8; y++) { let n = 0; for (let x = 0; x < q.w; x++) if (q.get(x, y) !== TRANSPARENT) n++; wmax = Math.max(wmax, n); }
+  assert.ok(wmax <= 2, `hairline is at most 2 real px wide, got ${wmax}`);
+});

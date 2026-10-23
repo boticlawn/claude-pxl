@@ -88,7 +88,7 @@ const OP_OPTS: Record<string, string[]> = {
   glow: ["where", "r", "strength", "color", "bands", "ramp"],
   ball: ["ry", "depth"],
   oval: ["depth"],
-  dome: ["scallop", "depth"],
+  dome: ["scallop", "phase", "depth"],
   pool: ["steps", "soft", "on"],
   planks: ["size", "len", "seam", "dir", "on"],
   bricks: ["size", "len", "seam", "on"],
@@ -111,9 +111,9 @@ const OP_OPTS: Record<string, string[]> = {
 };
 
 const ASSET_OPTS: Record<AssetKind, string[]> = {
-  sprite: ["w", "h", "base", "mx", "my", "swap", "flip", "rot", "outline", "outline8", "outlineOpen", "crop", "layers", "form", "ink", "inner", "innerSkip"],
-  scene: ["w", "h", "bg", "mx", "my", "swap", "flip", "rot", "outline", "outline8", "outlineOpen", "crop", "layers", "form", "ink", "inner", "innerSkip"],
-  anim: ["w", "h", "base", "mx", "my", "swap", "flip", "rot", "outline", "outline8", "outlineOpen", "crop", "layers", "form", "ink", "inner", "innerSkip", "fps", "frames", "loop"],
+  sprite: ["w", "h", "base", "mx", "my", "swap", "flip", "rot", "outline", "outline8", "outlineOpen", "outlineHoles", "crop", "layers", "form", "ink", "inner", "innerSkip"],
+  scene: ["w", "h", "bg", "mx", "my", "swap", "flip", "rot", "outline", "outline8", "outlineOpen", "outlineHoles", "crop", "layers", "form", "ink", "inner", "innerSkip"],
+  anim: ["w", "h", "base", "mx", "my", "swap", "flip", "rot", "outline", "outline8", "outlineOpen", "outlineHoles", "crop", "layers", "form", "ink", "inner", "innerSkip", "fps", "frames", "loop"],
 };
 const FRAME_OPTS = ["ms", "hold"];
 /** Longest loop a combined timeline may have (ms); longer ones are cut. */

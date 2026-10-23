@@ -319,7 +319,7 @@ function finish(img: Img, def: AssetDef, pal: Palette, trace?: Trace, ink?: Ink)
   const light = o.form && o.form !== true ? o.form.light : undefined;
   if (o.outline === "auto" && ink && ink.inner > 0 && o.inner !== false)
     step("inner lines", () => { innerLines(img, pal, typeof o.inner === "number" ? { ...ink, inner: o.inner } : ink, o.innerSkip ? pal.resolveSet(o.innerSkip) : undefined); });
-  if (o.outline === "auto") step("outline auto", () => openSides(selout(img, pal, light, o.outlineOpen, ink), o.outlineOpen));
+  if (o.outline === "auto") step("outline auto", () => openSides(selout(img, pal, light, o.outlineOpen, ink, o.outlineHoles !== false), o.outlineOpen));
   else if (o.outline) step(`outline ${o.outline}`, () => openSides(img.outline(solid(pal, o.outline!), false), o.outlineOpen));
   if (o.outline8) step(`outline8 ${o.outline8}`, () => img.outline(solid(pal, o.outline8!), true));
   if (o.crop) step("crop", () => img.crop());

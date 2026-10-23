@@ -725,15 +725,15 @@ export class Canvas {
    * center of the base (cx, by), radii rx / ry (height). `scallop` = width of a wavy lower edge.
    */
   dome(cx: number, by: number, rx: number, ry: number, c: string, opts: DomeOpts = {}): void {
-    const col = this.color(c), sc = opts.scallop ?? 0, d = opts.depth ?? 1;
+    const col = this.color(c), sc = opts.scallop ?? 0, d = opts.depth ?? 1, ph = opts.phase ?? 0;
     for (let y = Math.floor(by - ry); y <= by + (sc ? 1 : 0); y++)
       for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) {
         const dx = (x - cx) / (rx + 0.5), dy = (y - by) / (ry + 0.5), q = dx * dx + dy * dy;
         if (q > 1 && y <= by) continue;
         if (y > by) {   // scallops hang below the rim
           if (!sc || Math.abs(dx) > 1) continue;
-          const ph = ((x - cx + rx) % sc) / sc;
-          if (Math.abs(ph - 0.5) > 0.3) continue;
+          const f = ((((x - cx + rx + ph) % sc) + sc) % sc) / sc;
+          if (Math.abs(f - 0.5) > 0.3) continue;
         }
         this.surf(x, y, col, dx * d, (Math.min(0.3, dy) * 0.6 - 0.1) * d, Math.sqrt(Math.max(0.05, 1 - Math.min(1, q))) + 0.25);
       }

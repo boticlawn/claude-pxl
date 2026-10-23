@@ -15,7 +15,7 @@ const ARGS: Record<string, string> = {
   dither: "ppll---", grad: "ppll---", noise: "ppll----", recolor: "-r-", shade: "r--", light: "r--",
   stamp: "-ppo", tile: "-pp--o", pattern: "-ppllo", tilemap: "-o", scatter: "-ppll-o",
   wire: "ppppl-o", text: "pp--o", lamp: "ppo", bump: "-o",
-  arch: "ppll--", ball: "ppp-o", oval: "pppp-o", dome: "pppp-o", fine: "pp--", cyl: "ppll-o", block: "ppll-o", tube: "ppppp-o",
+  arch: "ppll--", ball: "ppp-o", oval: "pppp-o", dome: "pppp-o", fine: "pp--", cyl: "ppll-o", block: "ppll-o", tube: "ppppR-o",
   form: "o", shadow: "ppppo", pool: "ppppo", flat: "r",
   planks: "ppll-o", bricks: "ppll-o", tiles: "ppll-o", stripes: "ppll-o", arrange: "ppl-o",
   water: "ppll-o", reflect: "ppllo", foam: "-o", caustics: "ppllo", palm: "ppo", foliage: "ppll-o", cloud: "ppll-o", mountain: "ppll-o",
@@ -27,7 +27,7 @@ const THIN_KEYS = new Set(["w", "bevel"]);
 /** Option keys holding lengths (numbers or number pairs) or positions: always scaled. */
 const LEN_KEYS = new Set([
   "r", "r1", "ry", "z", "w", "cap", "top", "side", "bevel", "bulge", "taper", "size", "len", "h", "lean",
-  "gap", "every", "start", "reflectLen", "shadow", "scallop", "x", "y", "scale", "cell", "skyReach", "sag", "dx", "dy",
+  "gap", "every", "start", "reflectLen", "shadow", "scallop", "x", "y", "scale", "cell", "skyReach", "sag", "dx", "dy", "phase",
 ]);
 
 const len = (v: number, k: number) => (Math.abs(v) <= 1 ? v : v * k);
@@ -49,6 +49,7 @@ function scaleOpts(name: string, o: Record<string, unknown>, k: number): Record<
     // stripes in fan mode: size is degrees, not pixels; text/caustics scale is a factor of k
     else if (key === "size" && name === "stripes" && o.center) out[key] = v;
     else if (THIN_KEYS.has(key) && typeof v === "number") out[key] = len(v, k);
+    else if (key === "r1" && typeof v === "number" && v <= 0.5) out[key] = v;
     else if (LEN_KEYS.has(key) && typeof v === "number") out[key] = v * k;
     else if (LEN_KEYS.has(key) && Array.isArray(v) && v.every((n) => typeof n === "number")) out[key] = v.map((n) => (n as number) * k);
     else out[key] = v;
@@ -65,6 +66,7 @@ export function scaleArgs(name: string, args: unknown[], k: number): unknown[] {
   return args.map((v, i) => {
     const t = spec[i] ?? "-";
     if (t === "p" && typeof v === "number") return v * k;
+    if (t === "R" && typeof v === "number") return v <= 0.5 ? v : v * k;   // radius: <= 0.5 = hairline
     if (t === "l" && typeof v === "number") return len(v, k);
     if (t === "a" && Array.isArray(v)) return v.map((n) => (typeof n === "number" ? n * k : n));
     if (t === "r") return scaleRegion(v as Region, k);
