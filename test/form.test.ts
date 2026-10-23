@@ -136,3 +136,9 @@ scene("s", { w: 20, h: 10 }, arrange(0, 0, 20, ["a", "b"], { gap: 2 }))`);
   assert.notEqual(s.get(6, 5), TRANSPARENT, "short one sits on the shared bottom");
   assert.equal(s.get(6, 0), TRANSPARENT);
 });
+
+test("chained steps add up", () => {
+  const p = load(`sprite("x", { w: 2, h: 1 }, px(0, 0, "o+1-1"), px(1, 0, "o"))`);
+  assert.equal(p.image("x").get(0, 0), p.image("x").get(1, 0));
+  assert.deepEqual(colorList("o+1-1g"), ["o+1-1", "g"]);
+});

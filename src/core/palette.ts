@@ -163,13 +163,15 @@ export class Palette {
 
   /** "o-2" / "o+1": a key stepped along its ramp (clamped at the ends). */
   private stepped(spec: string): Color | undefined {
-    const m = /^(.+?)([+-]\d+)$/u.exec(spec);
+    // Chains add up: "p+1-1" = "p", handy when helpers build steps from a step.
+    const m = /^(.+?)((?:[+-]\d+)+)$/u.exec(spec);
     if (!m) return undefined;
     const base = this.keys.get(m[1]);
     if (base === undefined) return undefined;
     const r = this.rampOf(base);
     if (!r) throw new PxError(`'${spec}': key '${m[1]}' is in no ramp (use material() or ramps())`);
-    return r.ramp[Math.max(0, Math.min(r.ramp.length - 1, r.i + Number(m[2])))];
+    const off = (m[2].match(/[+-]\d+/g) ?? []).reduce((a, v) => a + Number(v), 0);
+    return r.ramp[Math.max(0, Math.min(r.ramp.length - 1, r.i + off))];
   }
 
   /**

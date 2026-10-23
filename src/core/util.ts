@@ -104,7 +104,7 @@ export function polyBounds(pts: number[]): { x0: number; y0: number; x1: number;
 export function colorList(cols: string | string[]): string[] {
   if (Array.isArray(cols)) return [...cols];
   if (cols.startsWith("#")) return [cols];
-  return cols.match(/.[+-]\d+|.\*(?!\*)|./gsu) ?? [];
+  return cols.match(/.(?:[+-]\d+)+|.\*(?!\*)|./gsu) ?? [];
 }
 
 /** Glob with "*" -> RegExp. */
