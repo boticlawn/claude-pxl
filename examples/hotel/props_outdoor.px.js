@@ -333,7 +333,7 @@ sprite("out_stairs", { ...S, w: 24, h: 20 },
   })
 
 // ---------------------------------------------------------------- hotel sign
-sprite("out_sign_hotel", { ...S, w: 40, h: 16 },
+sprite("out_sign_hotel", { form: { dither: 0 }, outline: "auto", w: 40, h: 16 },
   tube(6, 12, 6, 15, 0.8, "d"), tube(33, 12, 33, 15, 0.8, "d"),          // legs
   (c) => {
     const col = c.color("r")
@@ -349,13 +349,13 @@ sprite("out_sign_hotel", { ...S, w: 40, h: 16 },
       const top = 4 - 4 * Math.sqrt(Math.max(0, 1 - ((x - 19.5) / 20) ** 2))
       c.px(x, Math.ceil(top) + 1, "r-1")
     }
-    c.hline(2, 11, 36, "r-1")
   },
   text(15, 5, "HOTEL", "c+1"),
-  // palm icon: curved trunk, four drooping fronds, a coconut
-  px(8, 10, "c+1"), px(8, 9, "c+1"), px(9, 8, "c+1"), px(9, 7, "c+1"),
-  hline(6, 5, 3, "c+1"), px(5, 6, "c+1"), hline(10, 5, 3, "c+1"), px(13, 6, "c+1"),
-  px(7, 4, "c+1"), px(11, 4, "c+1"), px(9, 6, "c+1"))
+  // palm icon: drooping fronds, crown, a trunk with a slight bend
+  (c) => {
+    const icon = [".###.###.", "#..###..#", "#...#...#", "....#....", "...#.....", "...#.....", "...#....."]
+    icon.forEach((row, y) => [...row].forEach((ch, x) => { if (ch === "#") c.px(4 + x, 4 + y, "c+1") }))
+  })
 
 // ---------------------------------------------------------------- overview sheet
 // All out_* sprites on sand in a flowing grid, then a 60px lagoon strip with the boat, rocks,
@@ -367,7 +367,11 @@ const SHEET = [
   "out_boat", "out_rock_a", "out_rock_b", "out_rock_c", "out_coral_fan", "out_coral_branch",
   "out_coral_brain", "out_seaweed", "out_fish_yellow", "out_fish_blue", "out_fish_striped",
 ]
-const SEA = ["q-2", "q-1", "q", "q+1", "q+2", "q+3", "q-3"]         // every tone of the water ramp
+// Key lists for foam/reflect: every step of a material ("z-3" .. "z+2").
+const RAMP = (k, lo, hi) => Array.from({ length: hi - lo + 1 }, (_, i) => i + lo === 0 ? k : `${k}${i + lo > 0 ? "+" : ""}${i + lo}`)
+const SEA = RAMP("q", -4, 3)
+const BOAT = [...RAMP("e", -3, 1), ...RAMP("z", -3, 2), ...RAMP("b", -3, 2), ...RAMP("C", -3, 2)]
+const ROCKS = [...RAMP("z", -3, 2), ...RAMP("v", -3, 2)]
 const WY = 112                                                       // water surface row
 scene("out_sheet", { w: 240, h: 172, bg: "s+1" },
   (c) => {
@@ -378,14 +382,16 @@ scene("out_sheet", { w: 240, h: 172, bg: "s+1" },
       c.put(img, x, y); x += img.w + 4; hmax = Math.max(hmax, img.h)
     }
   },
-  // lagoon strip: the boat's hull bottom row (last row before its outline) sits on row WY - 1,
-  // so the water's top row is its waterline; water() then adds the reflection + foam.
-  stamp("out_boat", 8, WY - 23),
-  water(0, WY, 240, 60, "q", { depth: [0, -2], reflect: "*", reflectLen: 10, ripples: 0.18, seed: 3 }),
+  // lagoon strip. water() is drawn first with its own foam/reflect off: on a scene background
+  // it would treat the sand above as "standing" and foam/reflect the whole row.
+  water(0, WY, 240, 60, "q", { depth: [0, -2], foam: 0, ripples: 0.18, seed: 3 }),
+  // boat: hull's bottom row lies on the water's top row (WY); its outline row below is clipped
+  clip([0, 0, 240, WY + 1], stamp("out_boat", 8, WY - 22)),
   // shore rocks half sunk in the water
-  stamp("out_rock_c", 92, WY - 6), stamp("out_rock_a", 124, WY - 4), stamp("out_rock_b", 148, WY - 2),
-  foam(["z-3", "z-2", "z-1", "z", "z+1", "z+2", "v", "v-1"], { on: SEA, c: "e" }),
+  clip([0, 0, 240, WY + 6], stamp("out_rock_c", 92, WY - 7), stamp("out_rock_a", 124, WY - 5), stamp("out_rock_b", 148, WY - 3)),
+  reflect(0, WY + 1, 240, 12, { keys: [...BOAT, ...ROCKS], on: SEA, seed: 2 }),
+  foam([...BOAT, ...ROCKS], { on: SEA, c: "e", keep: 0.9 }),
   // sea floor: coral garden, seaweed and fish below the surface
-  stamp("out_coral_brain", 170, 160), stamp("out_coral_fan", 186, 156), stamp("out_coral_branch", 204, 158),
-  stamp("out_seaweed", 222, 154), stamp("out_seaweed", 162, 156, { flip: "x" }), stamp("out_coral_fan", 120, 158, { flip: "x" }),
+  stamp("out_coral_brain", 170, 160), stamp("out_coral_fan", 186, 158), stamp("out_coral_branch", 204, 158),
+  stamp("out_seaweed", 222, 154), stamp("out_seaweed", 162, 156, { flip: "x" }), stamp("out_coral_fan", 120, 160, { flip: "x" }),
   stamp("out_fish_yellow", 186, 136), stamp("out_fish_blue", 206, 142, { flip: "x" }), stamp("out_fish_striped", 140, 140))
