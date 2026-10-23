@@ -58,8 +58,12 @@ export interface AssetOpts {
   outline8?: string;
   /** Sides that get no outline ("b" = bottom: things standing in water or cut by a frame). */
   outlineOpen?: string;
-  /** false: ignore the project's ink() for this asset (pure colored sel-out, no inner lines). */
-  ink?: boolean;
+  /** false: ignore the project's ink() for this asset; a number overrides its mix (0.3 = light lines for foliage). */
+  ink?: boolean | number;
+  /** Inner contour lines: false = none for this asset, a number = strength. */
+  inner?: boolean | number;
+  /** Keys / families that never get inner lines (painted decoration: "a*q*" for a picture's sky and sea). */
+  innerSkip?: string;
   /** Form-shade the finished asset (after mirror/flip/rot, before outline). */
   form?: boolean | import("./form.ts").FormOpts;
   crop?: boolean;

@@ -155,3 +155,11 @@ scene("s", { w: 20, h: 12 }, stamp("b", 5, 1), px(0, 0, "o"))`;
   assert.equal(two.image("s").get(1, 1), two.image("s").get(0, 0), "px becomes a 2x2 block");
   assert.notEqual(one.image("s").get(1, 1), one.image("s").get(0, 0));
 });
+
+test("ink: swap variants recolor the inked outline too", () => {
+  const p = load(`material("t", "#1fa39a"); ink("#3a2622")
+sprite("b", { w: 9, h: 9, form: true, outline: "auto" }, ball(4, 4, 4, "o"))
+sprite("c", { base: "b", swap: { o: "t" } })
+sprite("d", { w: 9, h: 9, form: true, outline: "auto" }, ball(4, 4, 4, "t"))`);
+  assert.equal(p.image("c").get(5, 10), p.image("d").get(5, 10));
+});

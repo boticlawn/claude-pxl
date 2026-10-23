@@ -15,6 +15,7 @@ import { PxError } from "./errors.ts";
 import { Img } from "./image.ts";
 import type { Palette } from "./palette.ts";
 import { bayer } from "./util.ts";
+import { inked } from "./inked.ts";
 
 // ------------------------------------------------------------------ color math (OKLab / OKLCH)
 
@@ -216,21 +217,16 @@ export interface Ink {
   inner: number;
 }
 
-/** Mix two colors in sRGB (cheap; for line colors). */
-function mixRgb(a: Color, b: Color, t: number): Color {
-  const [r1, g1, b1] = channels(a), [r2, g2, b2] = channels(b);
-  return pack(r1 + (r2 - r1) * t, g1 + (g2 - g1) * t, b1 + (b2 - b1) * t);
-}
 
 /**
  * Inner contour lines: where two different materials meet inside one sprite (pillow on a
  * blanket, frame around a picture, a hat on a head), the pixel on the darker side becomes a line
  * in the dark end of its ramp, pulled toward the ink. Shading steps of one material never get a line.
  */
-export function innerLines(img: Img, pal: Palette, ink: Ink): void {
+export function innerLines(img: Img, pal: Palette, ink: Ink, skip?: Set<Color>): void {
   if (ink.inner <= 0) return;
   const { w, h } = img, out = img.data.slice();
-  const fam = (c: Color) => (c === TRANSPARENT ? undefined : pal.rampOf(c)?.ramp);
+  const fam = (c: Color) => (c === TRANSPARENT || skip?.has(c) ? undefined : pal.rampOf(c)?.ramp);
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++) {
       const i = y * w + x, a = img.data[i];
@@ -244,7 +240,8 @@ export function innerLines(img: Img, pal: Palette, ink: Ink): void {
         // Line goes on the darker material's side; its color: dark tone of that material, inked.
         const [ti, tc, tr] = lum(a) <= lum(b) ? [i, a, fa] : [j, b, fb];
         const dark = tr[Math.max(0, Math.min(1, tr.length - 1))];
-        out[ti] = mixRgb(mixRgb(tc, dark, 0.75), ink.color, ink.mix * 0.6 * ink.inner);
+        void tc;
+        out[ti] = inked(dark, ink.color, ink.mix * 0.6 * ink.inner);
       }
     }
   img.data.set(out);
@@ -284,7 +281,7 @@ export function selout(img: Img, pal: Palette, light: LightSpec = "tl", open = "
         if (r && r.ramp.length > 2) best = r.ramp[1];
       }
       // Ink: pull every outline toward one line color (less on the lit side) for a drawn look.
-      if (ink) best = mixRgb(best, ink.color, lit ? ink.mix * 0.6 : ink.mix);
+      if (ink) best = inked(best, ink.color, lit ? ink.mix * 0.6 : ink.mix);
       o.set(x, y, best);
     }
   return o;

@@ -1,6 +1,7 @@
 import { type Color, parseHex, TRANSPARENT, toHex } from "./color.ts";
 import { PxError, didYouMean } from "./errors.ts";
 import { colorList } from "./util.ts";
+import { followInk } from "./inked.ts";
 
 export const INDEX_KEYS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const RESERVED = new Set([".", "_", " ", "#"]);
@@ -192,6 +193,7 @@ export class Palette {
       }
       m.set(a, b);
     }
+    followInk(m);
     return m;
   }
 

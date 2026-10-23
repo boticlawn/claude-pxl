@@ -218,7 +218,9 @@ export function buildAsset(ctx: BuildCtx, def: AssetDef, seed: number, trace?: T
     snap?.(`layer '${l.name}'${l.opts.hidden ? " (hidden)" : ""}`, l.loc);
   });
 
-  const img = finish(base, def, pal, trace, def.opts.ink === false ? undefined : ctx.ink);
+  const oi = def.opts.ink;
+  const ink = oi === false || !ctx.ink ? undefined : typeof oi === "number" ? { ...ctx.ink, mix: oi } : ctx.ink;
+  const img = finish(base, def, pal, trace, ink);
   trace?.finish(img);
   return { img, layers, trace, anim: tl };
 }
@@ -315,7 +317,8 @@ function finish(img: Img, def: AssetDef, pal: Palette, trace?: Trace, ink?: Ink)
     step("form", () => { applyForm(img, pal, fo); });
   }
   const light = o.form && o.form !== true ? o.form.light : undefined;
-  if (o.outline === "auto" && ink && ink.inner > 0) step("inner lines", () => { innerLines(img, pal, ink); });
+  if (o.outline === "auto" && ink && ink.inner > 0 && o.inner !== false)
+    step("inner lines", () => { innerLines(img, pal, typeof o.inner === "number" ? { ...ink, inner: o.inner } : ink, o.innerSkip ? pal.resolveSet(o.innerSkip) : undefined); });
   if (o.outline === "auto") step("outline auto", () => selout(img, pal, light, o.outlineOpen, ink));
   else if (o.outline) step(`outline ${o.outline}`, () => openSides(img.outline(solid(pal, o.outline!), false), o.outlineOpen));
   if (o.outline8) step(`outline8 ${o.outline8}`, () => img.outline(solid(pal, o.outline8!), true));
