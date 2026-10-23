@@ -503,6 +503,24 @@ export class Canvas {
     setNormal(this.img.normals(), (this.oy + Math.floor(y)) * this.img.w + this.ox + Math.floor(x), nx, ny, Math.max(0.05, nz));
   }
 
+  /** Arch: a w x h rectangle whose top is a half ellipse (windows, doors, arcades); ring = 1px border. */
+  arch(x: number, y: number, w: number, h: number, c: string, ring = false): void {
+    const col = this.color(c), rx = w / 2, ry = Math.min(h, rx);
+    const inside = (xx: number, yy: number) => {
+      if (xx < 0 || yy < 0 || xx >= w || yy >= h) return false;
+      if (yy >= ry) return true;
+      const dx = (xx + 0.5 - rx) / rx, dy = (yy + 0.5 - ry) / ry;
+      return dx * dx + dy * dy <= 1;
+    };
+    for (let yy = 0; yy < h; yy++)
+      for (let xx = 0; xx < w; xx++) {
+        if (!inside(xx, yy)) continue;
+        if (ring && inside(xx - 1, yy) && inside(xx + 1, yy) && inside(xx, yy - 1) && inside(xx, yy + 1)
+          && inside(xx - 1, yy - 1) && inside(xx + 1, yy - 1)) continue;
+        this.plot(x + xx, y + yy, col);
+      }
+  }
+
   /** Sphere / ellipsoid: center (cx, cy), radius r (ry for an oval). */
   ball(cx: number, cy: number, r: number, c: string, opts: BallOpts = {}): void {
     const col = this.color(c), rx = r, ry = opts.ry ?? r, d = opts.depth ?? 1;
@@ -671,7 +689,7 @@ export const OPS = [
   "px", "rect", "box", "line", "hline", "vline", "ellipse", "circ", "ring", "poly", "fill",
   "dither", "grad", "noise", "recolor", "shade", "light",
   "stamp", "tile", "pattern", "tilemap", "scatter", "grid", "wire", "text", "lamp", "bump", "normals",
-  "ball", "cyl", "block", "tube", "form", "shadow",
+  "arch", "ball", "cyl", "block", "tube", "form", "shadow",
   "water", "reflect", "foam", "caustics", "palm", "foliage", "cloud", "mountain",
 ] as const;
 export type OpName = (typeof OPS)[number];

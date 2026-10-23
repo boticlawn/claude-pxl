@@ -1,0 +1,99 @@
+# pxl form & environment: depth from shape
+
+Flat fills read as stickers. Depth comes from four things, and pxl now computes all of them:
+**materials** (ramps with hue shift), **form** (surfaces with normals, lit from one direction),
+**edges** (selective outline, contact shadows) and **space** (water, foliage, sky, haze).
+
+The rule: draw objects as *surfaces in a material's base tone*, then let `form()` light them.
+Never hand-place `shade()` regions to fake volume.
+
+## Materials
+
+```js
+material("o", "#d0703c")                       // terracotta: 6 tones, base at index 3
+material("q", "#22b3c9", { steps: 7, at: 4 })  // more tones, base higher up (room for shadows)
+material("c", "#eef0f2", { steps: 5, at: 3, shift: 0.5 })
+```
+
+One base color becomes a perceptual (OKLCH) ramp: shadows rotate toward blue-violet and keep
+their saturation, lights rotate toward warm yellow and lose a little chroma. That's what makes
+hand-made pixel-art ramps look alive instead of muddy.
+
+- `o` is the base tone; steps are `"o-1"`, `"o-2"` (darker) and `"o+1"`, `"o+2"` (lighter),
+  clamped at the ends. Step keys work in every op and option, not in grid strings.
+- Options: `steps` (default 6), `at` (index of the base, default ~60% up), `shift` (hue-shift
+  strength, 0 = plain), `dark` / `light` (OKLab lightness of the ends), `cool` / `warm` (target
+  hues, default 265 / 90).
+- Materials are ramps: `shade()`, `light()`, `shadow()`, `glow({ ramp })` all step along them.
+- 7–12 materials with 5–7 tones each is normal for a rich scene. Give every material its own key.
+
+## Form primitives
+
+They paint the base color *and* a surface normal per pixel.
+
+| Op | Shape |
+|---|---|
+| `ball(cx, cy, r, c, { ry, depth })` | sphere / oval (fruit, heads, bushes, lamps, rocks) |
+| `cyl(x, y, w, h, c, { cap, capColor, bulge, taper, dir })` | standing cylinder in box x,y,w,h: `cap` = px of visible top ellipse; `bulge` barrels; `taper` pots/cups; `dir: "h"` logs, pipes |
+| `block(x, y, w, h, c, { top, side, sideAt, bevel, topColor, sideColor })` | box: front face + `top` px top face + `side` px side face (oblique); `bevel` rounds the front edges |
+| `tube(x0, y0, x1, y1, r, c, { r1 })` | capsule along a line, tapering to `r1` (limbs, branches, pipes, ropes) |
+| `bump("dome" \| "bevel" \| "luma")` | give normals to anything already drawn (from lighting.md) |
+| `arch(x, y, w, h, c, ring?)` | flat shape: rectangle with a half-ellipse top (windows, doors, arcades) |
+
+Details painted *onto* a surface afterwards (`hline`, `px`, a label, plank seams in a step color)
+keep the surface's normal, so they get shaded with it: a band around a barrel curves with it.
+Stamped sprites bring their normals along, flipped correctly.
+
+## form({ light, contrast, dither, bounce, rim, spec, on, where })
+
+Turns every pixel that has a normal and a ramp color into the right step of its ramp:
+
+- `light`: `"tl"` (default), `"t"`, `"tr"`, `"l"`, `"r"`, `"front"` or `[x, y, z]` (y down, z toward the viewer). **Use one light direction per scene.**
+- `contrast` (1): how many steps the light spreads over. 0.6 for soft things (clouds, cloth), 1.2 for hard ones.
+- `dither` (0.35): ordered dither on band seams; 0 = hard cel bands.
+- `bounce` (0.6): reflected light into undersides. `rim` (1): extra step on the silhouette facing away from the light. `spec` (0): a highlight pop on the brightest spot.
+
+Where to call it:
+- **Sprites**: `sprite("pot", { form: true, outline: "auto" }, cyl(...), ball(...))` runs it on the finished sprite (after mirror/flip, so `mx` halves are lit correctly).
+- **Scenes / layers**: put `form()` after what it should light. Pixels are shaded once: a shaded sprite stamped into a scene that calls `form()` again is left alone. Unshaded stamped sprites get lit by the scene's light, which is the most consistent option for a whole scene.
+- Run `form()` on a layer *before* `haze`, since hazed colors leave the ramps.
+
+## Edges
+
+- `outline: "auto"` (sprite option): selective outline. Each outline pixel takes the darkest tone of the material it borders, one step lighter on the lit side. Outlines get colored, not black.
+- `shadow(cx, cy, rx, ry, { steps, soft, on })`: contact shadow under an object, stepping the ground darker along its ramp with a dithered rim. Every object that stands on something needs one. Draw it on the ground before stamping the object.
+
+## Environment brushes
+
+| Op | What it makes |
+|---|---|
+| `water(x, y, w, h, c, { depth, shadow, ripples, len, glints, reflect, foam, seed })` | horizontal ripple strokes in the water material's tones, `depth: [top, bottom]` ramp offsets (e.g. `[-1, 1]`), `shadow` rows darkened under a dock, glints |
+| `reflect(x, y, w, len, { keys, on, steps })` | reflections below surface row `y` for `len` rows: whatever stands above becomes a darker step of the water, wobbling and broken by waves. Draw posts/walls first, then reflect |
+| `foam(around, { on, c, keep })` | white water where objects of keys `around` meet the water `on` (rocks, posts, swimmers) |
+| `caustics(x, y, w, h, { scale, width, steps, on })` | light net on pool floors / shallow sand |
+| `palm(x, y, { h, lean, trunk, leaf, fronds, len, nuts })` | palm from its base: ringed curved trunk, drooping fronds with leaflets (needs `form()` after) |
+| `foliage(cx, cy, rx, ry, c, { size, count, flowers, bloom, tips })` | bush / tree crown / hedge from leaf clumps; `flowers: "p"` sprinkles blossoms (bougainvillea, hibiscus) |
+| `cloud(x, y, w, h, c, { puffs })` | cumulus with flat base (form it with `contrast: 1`, `rim: 0`) |
+| `mountain(x, baseY, w, h, c, { peak, rough, gullies })` | ridge with lit/shadowed slopes and creases |
+
+All take `seed` to reroll.
+
+## Space: haze and layers
+
+`layer("far", { haze: 0.45, hazeColor: "a+1" }, ...)` pushes a layer toward the sky color
+(aerial perspective). Typical stack, back to front:
+
+1. sky (`grad`), clouds (`cloud` + `form`), 
+2. far land (`mountain` + `form`, haze 0.4–0.6),
+3. mid ground (sea, buildings, haze 0–0.15),
+4. foreground (full contrast, darkest darks, strongest outlines).
+
+Value hierarchy matters more than detail: far = light and low contrast, near = full range.
+
+## Density checklist (what makes a scene read as "rich")
+
+- Every room/area has a back wall, a floor line, furniture in front, and 3+ small props (lamp, plant, picture, rug).
+- Plants everywhere: pots on floors, vines down walls (`foliage` with small `size`), flowers in clumps.
+- Repeated elements vary: `reseed`, `rswap`, `rflip`.
+- Light sources glow: `glow("l", { r: 5, strength: 0.4 })` on lamps after `form()`.
+- Objects connect to the ground: contact `shadow()` under everything, `foam` where things touch water.
