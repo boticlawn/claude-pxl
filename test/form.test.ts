@@ -141,6 +141,7 @@ test("chained steps add up", () => {
   const p = load(`sprite("x", { w: 2, h: 1 }, px(0, 0, "o+1-1"), px(1, 0, "o"))`);
   assert.equal(p.image("x").get(0, 0), p.image("x").get(1, 0));
   assert.deepEqual(colorList("o+1-1g"), ["o+1-1", "g"]);
+  assert.deepEqual(colorList("p+1*q*"), ["p+1*", "q*"]);
 });
 
 test("detail(2): logical coordinates, double resolution, 1px seams stay 1px", () => {
