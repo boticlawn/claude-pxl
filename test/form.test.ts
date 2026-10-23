@@ -99,3 +99,40 @@ sprite("c", { base: "b", swap: { o: "t" } })`);
   const img = p.image("c"), teal = new Set(materialRamp(parseHex("#1fa39a")!).ramp);
   for (let i = 0; i < img.data.length; i++) if (img.data[i] !== TRANSPARENT) assert.ok(teal.has(img.data[i]), "all pixels moved to the teal ramp");
 });
+
+test("oval fills its box exactly; dome sits on its base row", () => {
+  const p = load(`sprite("o", { form: true }, oval(0, 0, 8, 6, "o"))
+sprite("d", { w: 11, h: 7, form: true }, dome(5, 6, 5, 5, "o"))`);
+  assert.equal(p.image("o").w, 8); assert.equal(p.image("o").h, 6);
+  const d = p.image("d");
+  assert.notEqual(d.get(5, 6), TRANSPARENT, "base row filled"); assert.equal(d.get(0, 1), TRANSPARENT, "round top");
+});
+
+test("planks/bricks/tiles paint seams in a darker step; stripes cycle; fan stripes radiate", () => {
+  const p = load(`
+scene("s", { w: 20, h: 8, bg: "o" }, planks(0, 0, 20, 8, "o", { size: 4 }))
+scene("t", { w: 12, h: 1, bg: "o" }, stripes(0, 0, 12, 1, ["o", "s"], { size: 3 }))`);
+  const s = p.image("s"), t = p.image("t");
+  assert.ok(lum(s.get(5, 0)) < lum(s.get(5, 2)), "seam row darker than the board");
+  assert.notEqual(t.get(0, 0), t.get(3, 0)); assert.equal(t.get(0, 0), t.get(6, 0));
+});
+
+test("outlineOpen leaves a side without outline; grid map paints material steps", () => {
+  const p = load(`
+sprite("b", { w: 4, h: 4, outline: "auto", outlineOpen: "b" }, rect(0, 0, 4, 4, "o"))
+sprite("g", { w: 3, h: 1 }, grid(0, 0, "aba", { a: "o-1", b: "o+1" }))`);
+  const b = p.image("b");
+  assert.equal(b.get(2, b.h - 1), TRANSPARENT); assert.notEqual(b.get(2, 0), TRANSPARENT);
+  const g = p.image("g");
+  assert.ok(lum(g.get(0, 0)) < lum(g.get(1, 0)));
+});
+
+test("arrange flows assets into rows, bottoms aligned", () => {
+  const p = load(`
+sprite("a", { w: 4, h: 6 }, rect(0, 0, 4, 6, "o"))
+sprite("b", { w: 4, h: 2 }, rect(0, 0, 4, 2, "s"))
+scene("s", { w: 20, h: 10 }, arrange(0, 0, 20, ["a", "b"], { gap: 2 }))`);
+  const s = p.image("s");
+  assert.notEqual(s.get(6, 5), TRANSPARENT, "short one sits on the shared bottom");
+  assert.equal(s.get(6, 0), TRANSPARENT);
+});
