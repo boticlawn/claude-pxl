@@ -93,6 +93,11 @@ pxl list  <art.px.js>            list assets, groups and sheets with source loca
   pixel font, `scatter` brushes, tilemaps, random groups with reproducible seeds.
 - **Scenes**: layers, cast-shadow and light layers, per-layer PNG export.
 - **Animation**: frames as patches over a base sprite → strips + JSON tags + GIF.
+- **Form & depth** (see [`form.md`](form.md)): `material()` ramps with hue shift, form primitives
+  (`ball oval dome cyl block tube`) lit by one `form()` pass inside the palette, selective or ink
+  line art with inner contour lines, contact and cast shadows, surface textures (`planks bricks
+  tiles stripes`), and `detail(k)` to render at k× resolution while authoring in logical pixels.
+- **Environment**: `water reflect foam caustics palm foliage cloud mountain` and layer `haze`.
 - **Lighting** (optional): lamps, glow, normal-based relief (see [`lighting.md`](lighting.md)).
 - **Errors** point at `file:line:col` and the asset/layer/op path, with "did you mean…" hints.
 
