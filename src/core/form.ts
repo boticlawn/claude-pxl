@@ -59,9 +59,12 @@ export function fromOklch(L: number, C: number, h: number): Color {
 }
 
 /** Move hue h toward target by amt (0..1) along the shorter way round. */
-function toward(h: number, target: number, amt: number): number {
-  const d = ((target - h + 540) % 360) - 180;
-  return (h + d * amt + 360) % 360;
+function toward(h: number, target: number, amt: number, warmPath = false): number {
+  let d = ((target - h + 540) % 360) - 180;
+  // Yellows sit opposite blue-violet: their shadows must turn through orange and red,
+  // never through green (that's what makes sand and blond hair go olive).
+  if (warmPath && d > 140) d -= 360;
+  return (((h + d * amt) % 360) + 360) % 360;
 }
 
 export interface MaterialOpts {
@@ -97,7 +100,7 @@ export function materialRamp(base: Color, o: MaterialOpts = {}): { ramp: Color[]
       const Li = L + (dark - L) * t;
       // Shadows: hue toward cool, chroma holds (slightly up) then fades in the deepest tones.
       const Ci = C * (1 + 0.15 * t - 0.45 * t * t) + 0.012 * t * shift;
-      ramp.push(fromOklch(Li, Math.max(0, Ci), toward(h, o.cool ?? 265, 0.32 * t * shift)));
+      ramp.push(fromOklch(Li, Math.max(0, Ci), toward(h, o.cool ?? 265, 0.32 * t * shift, true)));
     } else {
       const t = (i - at) / Math.max(1, n - 1 - at); // 0 at base .. 1 lightest
       const Li = L + (light - L) * t;
