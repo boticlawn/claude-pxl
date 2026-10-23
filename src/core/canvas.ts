@@ -160,7 +160,22 @@ export class Canvas {
 
   /** One real pixel, whatever the detail: fine highlights, eyes, stitches, glints under detail(k). */
   dot(x: number, y: number, c: string): void {
-    this.plot(Math.round(x), Math.round(y), this.color(c));
+    this.plot(Math.floor(x + 1e-6), Math.floor(y + 1e-6), this.color(c));
+  }
+
+  /**
+   * Grid at full resolution: each char is ONE real pixel (detail 2: the grid is half as big in
+   * logical px). x, y are logical. For faces, prints, decals, fine patterns. Keeps normals.
+   */
+  fine(x: number, y: number, s: string, map?: Record<string, string>): void {
+    gridRows(String(s)).forEach((row, r) => {
+      [...row].forEach((ch, i) => {
+        if (ch === "." || ch === " ") return;
+        let c: Resolved;
+        try { c = this.color(map?.[ch] ?? ch); } catch (e) { throw new PxError(`${(e as Error).message} at fine row ${r}, col ${i}`); }
+        this.plot(Math.floor(x) + i, Math.floor(y) + r, c);
+      });
+    });
   }
 
   /** Block size for pixel-exact ops (px, grid, normals): k when called from an art file, else 1. */
@@ -889,7 +904,7 @@ export const OPS = [
   "px", "rect", "box", "line", "hline", "vline", "ellipse", "circ", "ring", "poly", "fill",
   "dither", "grad", "noise", "recolor", "shade", "light",
   "stamp", "tile", "pattern", "tilemap", "scatter", "grid", "wire", "text", "lamp", "bump", "normals",
-  "dot", "arch", "ball", "oval", "dome", "cyl", "block", "tube", "form", "shadow", "pool", "flat", "planks", "bricks", "tiles", "stripes", "arrange",
+  "dot", "fine", "arch", "ball", "oval", "dome", "cyl", "block", "tube", "form", "shadow", "pool", "flat", "planks", "bricks", "tiles", "stripes", "arrange",
   "water", "reflect", "foam", "caustics", "palm", "foliage", "cloud", "mountain",
 ] as const;
 export type OpName = (typeof OPS)[number];

@@ -319,7 +319,7 @@ function finish(img: Img, def: AssetDef, pal: Palette, trace?: Trace, ink?: Ink)
   const light = o.form && o.form !== true ? o.form.light : undefined;
   if (o.outline === "auto" && ink && ink.inner > 0 && o.inner !== false)
     step("inner lines", () => { innerLines(img, pal, typeof o.inner === "number" ? { ...ink, inner: o.inner } : ink, o.innerSkip ? pal.resolveSet(o.innerSkip) : undefined); });
-  if (o.outline === "auto") step("outline auto", () => selout(img, pal, light, o.outlineOpen, ink));
+  if (o.outline === "auto") step("outline auto", () => openSides(selout(img, pal, light, o.outlineOpen, ink), o.outlineOpen));
   else if (o.outline) step(`outline ${o.outline}`, () => openSides(img.outline(solid(pal, o.outline!), false), o.outlineOpen));
   if (o.outline8) step(`outline8 ${o.outline8}`, () => img.outline(solid(pal, o.outline8!), true));
   if (o.crop) step("crop", () => img.crop());
@@ -329,9 +329,10 @@ function finish(img: Img, def: AssetDef, pal: Palette, trace?: Trace, ink?: Ink)
 /** Clear the outline row/column on the given sides ("tblr") of an outlined image. */
 function openSides(img: Img, sides?: string): Img {
   if (!sides) return img;
-  for (let x = 0; x < img.w; x++) { if (sides.includes("b")) img.set(x, img.h - 1, TRANSPARENT); if (sides.includes("t")) img.set(x, 0, TRANSPARENT); }
-  for (let y = 0; y < img.h; y++) { if (sides.includes("l")) img.set(0, y, TRANSPARENT); if (sides.includes("r")) img.set(img.w - 1, y, TRANSPARENT); }
-  return img;
+  // The open sides don't grow the canvas: drop the outline row/column there entirely.
+  const x0 = sides.includes("l") ? 1 : 0, y0 = sides.includes("t") ? 1 : 0;
+  const x1 = img.w - (sides.includes("r") ? 1 : 0), y1 = img.h - (sides.includes("b") ? 1 : 0);
+  return img.sub(x0, y0, x1 - x0, y1 - y0);
 }
 
 function solid(pal: Palette, spec: string): Color {

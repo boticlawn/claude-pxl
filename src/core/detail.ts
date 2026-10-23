@@ -2,7 +2,8 @@
 //
 // Every op called from an art file gets its geometry scaled by k before it runs: positions and
 // sizes grow, so form primitives, curves, palms, foliage and textures come out with k times the
-// detail. Lengths of 1 px stay 1 px (seams, rails, cords, outlines), which is exactly what makes a
+// detail. Radii and positions always scale; stroke-like lengths (rect/line sizes, bevel widths) of
+// 1 px stay 1 px (seams, rails, cords, outlines), which is exactly what makes a
 // detailed render look finer instead of just bigger. Single pixels (px, grid chars) become k x k
 // blocks so hand-placed pixel art keeps its shape.
 import type { Region } from "./util.ts";
@@ -10,18 +11,20 @@ import type { Region } from "./util.ts";
 /** Per op, the kind of each positional argument: p position, l length, a point list, r region, o options, - untouched. */
 const ARGS: Record<string, string> = {
   px: "pp-", dot: "pp-", rect: "ppll-", box: "ppll-", line: "pppp-l", hline: "ppl-", vline: "ppl-",
-  ellipse: "ppll--", circ: "ppl-", ring: "ppl-", poly: "a-", fill: "pp-",
+  ellipse: "pppp--", circ: "ppp-", ring: "ppp-", poly: "a-", fill: "pp-",
   dither: "ppll---", grad: "ppll---", noise: "ppll----", recolor: "-r-", shade: "r--", light: "r--",
   stamp: "-ppo", tile: "-pp--o", pattern: "-ppllo", tilemap: "-o", scatter: "-ppll-o",
   wire: "ppppl-o", text: "pp--o", lamp: "ppo", bump: "-o",
-  arch: "ppll--", ball: "ppl-o", oval: "ppll-o", dome: "ppll-o", cyl: "ppll-o", block: "ppll-o", tube: "ppppl-o",
-  form: "o", shadow: "ppllo", pool: "ppllo", flat: "r",
+  arch: "ppll--", ball: "ppp-o", oval: "pppp-o", dome: "pppp-o", fine: "pp--", cyl: "ppll-o", block: "ppll-o", tube: "ppppp-o",
+  form: "o", shadow: "ppppo", pool: "ppppo", flat: "r",
   planks: "ppll-o", bricks: "ppll-o", tiles: "ppll-o", stripes: "ppll-o", arrange: "ppl-o",
   water: "ppll-o", reflect: "ppllo", foam: "-o", caustics: "ppllo", palm: "ppo", foliage: "ppll-o", cloud: "ppll-o", mountain: "ppll-o",
   glow: "-o", lighting: "o", clip: "r",
 };
 
-/** Option keys holding lengths (numbers or number pairs) or positions. */
+/** Option keys that are stroke widths: 1 stays 1 real px (thin rims and bevels). */
+const THIN_KEYS = new Set(["w", "bevel"]);
+/** Option keys holding lengths (numbers or number pairs) or positions: always scaled. */
 const LEN_KEYS = new Set([
   "r", "r1", "ry", "z", "w", "cap", "top", "side", "bevel", "bulge", "taper", "size", "len", "h", "lean",
   "gap", "every", "start", "reflectLen", "shadow", "scallop", "x", "y", "scale", "cell", "skyReach", "sag", "dx", "dy",
@@ -45,8 +48,9 @@ function scaleOpts(name: string, o: Record<string, unknown>, k: number): Record<
     else if (key === "center" && Array.isArray(v)) out[key] = v.map((n) => (n as number) * k);
     // stripes in fan mode: size is degrees, not pixels; text/caustics scale is a factor of k
     else if (key === "size" && name === "stripes" && o.center) out[key] = v;
-    else if (LEN_KEYS.has(key) && typeof v === "number") out[key] = len(v, k);
-    else if (LEN_KEYS.has(key) && Array.isArray(v) && v.every((n) => typeof n === "number")) out[key] = v.map((n) => len(n as number, k));
+    else if (THIN_KEYS.has(key) && typeof v === "number") out[key] = len(v, k);
+    else if (LEN_KEYS.has(key) && typeof v === "number") out[key] = v * k;
+    else if (LEN_KEYS.has(key) && Array.isArray(v) && v.every((n) => typeof n === "number")) out[key] = v.map((n) => (n as number) * k);
     else out[key] = v;
   }
   if (name === "text") out.scale = ((o.scale as number) ?? 1) * k;

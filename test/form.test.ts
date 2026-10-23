@@ -122,7 +122,9 @@ test("outlineOpen leaves a side without outline; grid map paints material steps"
 sprite("b", { w: 4, h: 4, outline: "auto", outlineOpen: "b" }, rect(0, 0, 4, 4, "o"))
 sprite("g", { w: 3, h: 1 }, grid(0, 0, "aba", { a: "o-1", b: "o+1" }))`);
   const b = p.image("b");
-  assert.equal(b.get(2, b.h - 1), TRANSPARENT); assert.notEqual(b.get(2, 0), TRANSPARENT);
+  assert.equal(b.h, 5, "outline on top only: the open bottom doesn't grow the canvas");
+  assert.equal(b.get(2, b.h - 1), p.image("b").get(2, 2), "bottom row is the sprite itself");
+  assert.notEqual(b.get(2, 0), TRANSPARENT);
   const g = p.image("g");
   assert.ok(lum(g.get(0, 0)) < lum(g.get(1, 0)));
 });
@@ -162,4 +164,10 @@ sprite("b", { w: 9, h: 9, form: true, outline: "auto" }, ball(4, 4, 4, "o"))
 sprite("c", { base: "b", swap: { o: "t" } })
 sprite("d", { w: 9, h: 9, form: true, outline: "auto" }, ball(4, 4, 4, "t"))`);
   assert.equal(p.image("c").get(5, 10), p.image("d").get(5, 10));
+});
+
+test("fine() paints one real pixel per char under detail(2)", () => {
+  const p = loadSource('detail(2); material("o", "#d0703c"); sprite("f", { w: 2, h: 1 }, rect(0, 0, 2, 1, "o"), fine(0, 0, "x.x", { x: "o-2" }))', "t.px.js");
+  const img = p.image("f");
+  assert.notEqual(img.get(0, 0), img.get(1, 0)); assert.equal(img.get(0, 0), img.get(2, 0)); assert.equal(img.get(0, 1), img.get(1, 0));
 });

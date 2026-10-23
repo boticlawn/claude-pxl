@@ -227,6 +227,27 @@ export function innerLines(img: Img, pal: Palette, ink: Ink, skip?: Set<Color>):
   if (ink.inner <= 0) return;
   const { w, h } = img, out = img.data.slice();
   const fam = (c: Color) => (c === TRANSPARENT || skip?.has(c) ? undefined : pal.rampOf(c)?.ramp);
+  // Size of each same-material blob: decals of 3 px or less (buttons, dots) get no ring.
+  const comp = new Int32Array(w * h).fill(-1), size: number[] = [];
+  for (let i0 = 0; i0 < w * h; i0++) {
+    if (comp[i0] >= 0) continue;
+    const f0 = fam(img.data[i0]);
+    if (!f0) continue;
+    const id = size.length, stack = [i0];
+    comp[i0] = id; let n = 0;
+    while (stack.length) {
+      const q = stack.pop()!; n++;
+      const qx = q % w, qy = (q - qx) / w;
+      for (const [ax, ay] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = qx + ax, ny = qy + ay;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        const ni = ny * w + nx;
+        if (comp[ni] < 0 && fam(img.data[ni]) === f0) { comp[ni] = id; stack.push(ni); }
+      }
+    }
+    size.push(n);
+  }
+  const tiny = (i: number) => comp[i] >= 0 && size[comp[i]] <= 3;
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++) {
       const i = y * w + x, a = img.data[i];
@@ -236,7 +257,7 @@ export function innerLines(img: Img, pal: Palette, ink: Ink, skip?: Set<Color>):
       for (const [dx, dy] of [[1, 0], [0, 1]] as const) {
         if (x + dx >= w || y + dy >= h) continue;
         const j = (y + dy) * w + x + dx, b = img.data[j], fb = fam(b);
-        if (!fb || fb === fa) continue;
+        if (!fb || fb === fa || tiny(i) || tiny(j)) continue;
         // Line goes on the darker material's side; its color: dark tone of that material, inked.
         const [ti, tc, tr] = lum(a) <= lum(b) ? [i, a, fa] : [j, b, fb];
         const dark = tr[Math.max(0, Math.min(1, tr.length - 1))];

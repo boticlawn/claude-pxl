@@ -49,6 +49,7 @@ export const SIGNATURES: Record<string, string> = {
   normals: "x:n y:n str:s",
   lighting: "?opts:o",
   dot: "x:n y:n c:c",
+  fine: "x:n y:n str:s ?map:o",
   arch: "x:n y:n w:n h:n c:c ?ring:b",
   ball: "cx:n cy:n r:n c:c ?opts:o",
   oval: "x:n y:n w:n h:n c:c ?opts:o",

@@ -84,6 +84,7 @@ export async function main(argv: string[]): Promise<number> {
         const name = a.rest[0];
         if (!name) throw new PxError("ascii needs an asset name: pxl ascii <file> <name>");
         const p = loadProject(file);
+        if (a.detail) p.detail = a.detail;
         const pal = p.assets.get(name)?.pal ?? p.pal;
         if (p.assets.get(name)?.kind === "anim")
           p.frames(name).forEach((f, i) => console.log(`frame ${i} (${f.ms}ms)\n${ascii(f.img, pal)}\n`));
