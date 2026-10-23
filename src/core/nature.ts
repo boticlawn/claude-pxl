@@ -258,6 +258,22 @@ export function palm(cv: Canvas, x: number, y: number, o: PalmOpts = {}): void {
     const lift = -0.55 - 0.25 * back; // fronds start rising, then droop
     let px = cx, py = cy, vx = dirx * 1, vy = lift;
     const steps = Math.round(len);
+    if (len < 16) {
+      // Small palms: each frond is one tapering, drooping blade with a few short leaflets;
+      // full leaflet fans just merge into a blob at this size.
+      const tone = back > 0.3 ? `${leaf}-1` : leaf;
+      let qx = cx, qy = cy;
+      for (let s = 0; s < steps; s++) {
+        const t = s / steps;
+        vy += (droop * 2.2) / steps;
+        const d = Math.hypot(vx, vy) || 1;
+        const nx2 = qx + vx / d, ny2 = qy + vy / d;
+        cv.tube(qx, qy, nx2, ny2, 1 - t * 0.7, tone, { r1: 1 - (t + 1 / steps) * 0.7 });
+        if (s % 3 === 2) cv.surf(nx2 + (-vy / d), ny2 + 1, tone, 0, 0.5, 0.8);
+        qx = nx2; qy = ny2;
+      }
+      continue;
+    }
     for (let s = 0; s < steps; s++) {
       const t = s / steps;
       vy += (droop * 2.2) / steps;
@@ -304,7 +320,9 @@ export interface FoliageOpts {
  */
 export function foliage(cv: Canvas, cx: number, cy: number, rx: number, ry: number, c: string, o: FoliageOpts = {}): void {
   const rnd = cv.rng(o.seed ?? 7), [s0, s1] = o.size ?? [2, 4];
-  const count = o.count ?? Math.max(3, Math.round((Math.PI * rx * ry) / 9));
+  // Enough clumps to close the crown whatever the clump size (small bushes stay dense).
+  const ravg = (s0 + s1) / 2;
+  const count = o.count ?? Math.max(4, Math.round((rx * ry) / (ravg * ravg * 0.45)));
   const clumps: [number, number, number][] = [];
   for (let i = 0; i < count; i++) {
     const a = rnd() * Math.PI * 2, d = Math.sqrt(rnd());

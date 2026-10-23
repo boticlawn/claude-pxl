@@ -37,6 +37,8 @@ They paint the base color *and* a surface normal per pixel.
 | `cyl(x, y, w, h, c, { cap, capColor, bulge, taper, dir })` | standing cylinder in box x,y,w,h: `cap` = px of visible top ellipse; `bulge` barrels; `taper` pots/cups; `dir: "h"` logs, pipes |
 | `block(x, y, w, h, c, { top, side, sideAt, bevel, topColor, sideColor })` | box: front face + `top` px top face + `side` px side face (oblique); `bevel` rounds the front edges |
 | `tube(x0, y0, x1, y1, r, c, { r1 })` | capsule along a line, tapering to `r1` (limbs, branches, pipes, ropes) |
+| `oval(x, y, w, h, c, { depth })` | ellipsoid filling a box exactly (heads, eggs, fruit: easier than `ball` for even sizes) |
+| `dome(cx, by, rx, ry, c, { scallop })` | half ellipsoid on a flat base at row `by` (umbrellas, domes, mushroom caps, lamp shades); `scallop` = wavy rim |
 | `bump("dome" \| "bevel" \| "luma")` | give normals to anything already drawn (from lighting.md) |
 | `arch(x, y, w, h, c, ring?)` | flat shape: rectangle with a half-ellipse top (windows, doors, arcades) |
 
@@ -61,9 +63,29 @@ Where to call it:
 - **Scenes / layers**: put `form()` after what it should light. Pixels are shaded once: a shaded sprite stamped into a scene that calls `form()` again is left alone. Unshaded stamped sprites get lit by the scene's light, which is the most consistent option for a whole scene.
 - Run `form()` on a layer *before* `haze`, since hazed colors leave the ramps.
 
+## Surfaces: textures, light pools, flat areas
+
+Construction belongs on surfaces, as seams in step colors (they keep the surface's normal):
+
+| Op | Use |
+|---|---|
+| `planks(x, y, w, h, c, { size, len, dir, seam, on })` | floorboards, decks, siding: boards `size` px apart, staggered joints every `len` |
+| `bricks(x, y, w, h, c, { size, len, seam, on })` | brick / stone courses with offset joints and a lit corner per brick |
+| `tiles(x, y, w, h, c, { size, seam, on })` | square tiles with grout |
+| `stripes(x, y, w, h, colors, { size, dir, center, on })` | stripes (`dir` v/h/d); `center: [x, y]` makes fan stripes (umbrellas), size = degrees |
+| `pool(cx, cy, rx, ry, { steps, soft, on })` | warm light pool: steps the wall/floor lighter (lamps, windows); the opposite of `shadow` |
+| `flat(where)` | drop normals in a region so form() leaves it as painted (glowing panes, screens, labels) |
+
+`grid(x, y, str, map)` paints a grid string at (x, y); `map` lets chars stand for any color spec
+(`{ e: "l-2", m: "u-1" }`), so faces and decals can use material steps. It keeps the normals under it.
+
+`arrange(x, y, w, ["a", "b*"], { gap })` lays assets out in rows, bottoms aligned (contact sheets,
+shelves of jars, rows of plants).
+
 ## Edges
 
-- `outline: "auto"` (sprite option): selective outline. Each outline pixel takes the darkest tone of the material it borders, one step lighter on the lit side. Outlines get colored, not black.
+- `outlineOpen: "b"` (sprite option): no outline on those sides (`t b l r`), for things standing in water or cut by a frame.
+- `outline: "auto"` (sprite option): selective outline. 1px lines (cords, rods) stay 1px, narrow gaps inside an object stay open. Each outline pixel takes the darkest tone of the material it borders, one step lighter on the lit side. Outlines get colored, not black.
 - `shadow(cx, cy, rx, ry, { steps, soft, on })`: contact shadow under an object, stepping the ground darker along its ramp with a dithered rim. Every object that stands on something needs one. Draw it on the ground before stamping the object.
 
 ## Environment brushes

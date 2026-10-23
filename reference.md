@@ -121,7 +121,7 @@ one placement doesn't reshuffle the others. Change `seed` to reroll.
 
 ## Form, materials, environment
 
-`material`, `ball cyl block tube arch`, `form`, `shadow`, sprite options `form` and
+`material`, `ball oval dome cyl block tube arch`, `form`, `shadow pool flat`, `planks bricks tiles stripes`, `arrange`, `grid(x, y, str, map)`, sprite options `form` and
 `outline: "auto"`, `water reflect foam caustics palm foliage cloud mountain`, and the layer
 options `haze` / `hazeColor`: see [form.md](form.md).
 

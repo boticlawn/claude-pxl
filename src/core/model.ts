@@ -56,6 +56,8 @@ export interface AssetOpts {
   /** Outline color, or "auto" for a selective outline (darkest tone of what it borders). */
   outline?: string;
   outline8?: string;
+  /** Sides that get no outline ("b" = bottom: things standing in water or cut by a frame). */
+  outlineOpen?: string;
   /** Form-shade the finished asset (after mirror/flip/rot, before outline). */
   form?: boolean | import("./form.ts").FormOpts;
   crop?: boolean;
@@ -265,6 +267,27 @@ export interface BlockOpts {
   bevel?: number;
   topColor?: string;
   sideColor?: string;
+}
+
+export interface DomeOpts {
+  /** Width of each scallop hanging under the rim in px (0 = straight rim). */
+  scallop?: number;
+  depth?: number;
+}
+
+export interface TextureOpts {
+  /** Board / brick / tile / stripe size in px. */
+  size?: number;
+  /** Board or brick length in px. */
+  len?: number;
+  /** Seam color (default: one step darker than the material). */
+  seam?: string;
+  /** "h" (default) / "v" boards; stripes: "v" (default) / "h" / "d" diagonal. */
+  dir?: "h" | "v" | "d";
+  /** Only paint onto these keys. */
+  on?: string;
+  /** stripes: radiate from this point instead (fan stripes); size = degrees per stripe. */
+  center?: [number, number];
 }
 
 export interface TubeOpts {

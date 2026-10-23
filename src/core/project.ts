@@ -40,7 +40,7 @@ export const SIGNATURES: Record<string, string> = {
   pattern: "name:s x:n y:n w:n h:n ?opts:o",
   tilemap: "map:s opts:o",
   scatter: "name:s x:n y:n w:n h:n count:n ?opts:o",
-  grid: "x:n y:n str:s",
+  grid: "x:n y:n str:s ?map:o",
   wire: "x0:n y0:n x1:n y1:n sag:n c:c ?opts:o",
   text: "x:n y:n str:t c:c ?opts:o",
   clip: "where:r ...items:I",
@@ -50,6 +50,15 @@ export const SIGNATURES: Record<string, string> = {
   lighting: "?opts:o",
   arch: "x:n y:n w:n h:n c:c ?ring:b",
   ball: "cx:n cy:n r:n c:c ?opts:o",
+  oval: "x:n y:n w:n h:n c:c ?opts:o",
+  dome: "cx:n by:n rx:n ry:n c:c ?opts:o",
+  pool: "cx:n cy:n rx:n ry:n ?opts:o",
+  flat: "?where:r",
+  planks: "x:n y:n w:n h:n c:c ?opts:o",
+  bricks: "x:n y:n w:n h:n c:c ?opts:o",
+  tiles: "x:n y:n w:n h:n c:c ?opts:o",
+  stripes: "x:n y:n w:n h:n colors:S ?opts:o",
+  arrange: "x:n y:n w:n names:a ?opts:o",
   cyl: "x:n y:n w:n h:n c:c ?opts:o",
   block: "x:n y:n w:n h:n c:c ?opts:o",
   tube: "x0:n y0:n x1:n y1:n r:n c:c ?opts:o",
@@ -76,6 +85,14 @@ const OP_OPTS: Record<string, string[]> = {
   lighting: ["cell", "ambient", "ambientColor", "sky", "skyColor", "skyReach", "block", "smooth", "emit", "shape", "relief", "skyDir"],
   glow: ["where", "r", "strength", "color", "bands", "ramp"],
   ball: ["ry", "depth"],
+  oval: ["depth"],
+  dome: ["scallop", "depth"],
+  pool: ["steps", "soft", "on"],
+  planks: ["size", "len", "seam", "dir", "on"],
+  bricks: ["size", "len", "seam", "on"],
+  tiles: ["size", "seam", "on"],
+  stripes: ["size", "dir", "on", "center"],
+  arrange: ["gap"],
   cyl: ["cap", "capColor", "bulge", "taper", "dir"],
   block: ["top", "side", "sideAt", "bevel", "topColor", "sideColor"],
   tube: ["r1"],
@@ -92,9 +109,9 @@ const OP_OPTS: Record<string, string[]> = {
 };
 
 const ASSET_OPTS: Record<AssetKind, string[]> = {
-  sprite: ["w", "h", "base", "mx", "my", "swap", "flip", "rot", "outline", "outline8", "crop", "layers", "form"],
-  scene: ["w", "h", "bg", "mx", "my", "swap", "flip", "rot", "outline", "outline8", "crop", "layers", "form"],
-  anim: ["w", "h", "base", "mx", "my", "swap", "flip", "rot", "outline", "outline8", "crop", "layers", "form", "fps", "frames", "loop"],
+  sprite: ["w", "h", "base", "mx", "my", "swap", "flip", "rot", "outline", "outline8", "outlineOpen", "crop", "layers", "form"],
+  scene: ["w", "h", "bg", "mx", "my", "swap", "flip", "rot", "outline", "outline8", "outlineOpen", "crop", "layers", "form"],
+  anim: ["w", "h", "base", "mx", "my", "swap", "flip", "rot", "outline", "outline8", "outlineOpen", "crop", "layers", "form", "fps", "frames", "loop"],
 };
 const FRAME_OPTS = ["ms", "hold"];
 /** Longest loop a combined timeline may have (ms); longer ones are cut. */

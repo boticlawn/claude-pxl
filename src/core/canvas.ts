@@ -3,7 +3,7 @@ import { Img } from "./image.ts";
 import type { Palette, Resolved } from "./palette.ts";
 import { PxError } from "./errors.ts";
 import { glyph, lineWidth } from "./font.ts";
-import type { BallOpts, BlockOpts, BumpOpts, CylOpts, LampOpts, ShadowOpts, TubeOpts, PlaceOpts, ScatterOpts, TextOpts, Timeline, TilemapOpts, WireOpts } from "./model.ts";
+import type { BallOpts, BlockOpts, BumpOpts, CylOpts, DomeOpts, LampOpts, ShadowOpts, TextureOpts, TubeOpts, PlaceOpts, ScatterOpts, TextOpts, Timeline, TilemapOpts, WireOpts } from "./model.ts";
 import { bump, dirOf, setNormal } from "./normals.ts";
 import { applyForm, type FormOpts } from "./form.ts";
 import * as N from "./nature.ts";
@@ -422,12 +422,17 @@ export class Canvas {
   }
 
   /** Grid string at (x, y): one char per pixel; "." keeps, "_" erases. */
-  grid(x: number, y: number, s: string): void {
+  /**
+   * Grid string at (x, y). `map` turns chars into any color spec ({ e: "l-2", m: "u-1" }), so
+   * grids can use material steps; unmapped chars are palette keys. Keeps the normals underneath,
+   * so a face painted on a ball is shaded with it.
+   */
+  grid(x: number, y: number, s: string, map?: Record<string, string>): void {
     gridRows(String(s)).forEach((row, r) => {
       [...row].forEach((ch, i) => {
         if (ch === "." || ch === " ") return;
         let c: Resolved;
-        try { c = this.color(ch); } catch (e) {
+        try { c = this.color(map?.[ch] ?? ch); } catch (e) {
           throw new PxError(`${(e as Error).message} at grid row ${r}, col ${i}`);
         }
         this.plot(x + i, y + r, c);
@@ -495,7 +500,8 @@ export class Canvas {
   // ---------------------------------------------------------------- form primitives
 
   /** Plot c and give it surface normal (nx, ny, nz) (ny down, nz toward the viewer). */
-  surf(x: number, y: number, c: Resolved, nx: number, ny: number, nz: number): void {
+  surf(x: number, y: number, c: Resolved | string, nx: number, ny: number, nz: number): void {
+    if (typeof c === "string") c = this.color(c);
     if (!this.plot(x, y, c)) return;
     setNormal(this.img.normals(), (this.oy + Math.floor(y)) * this.img.w + this.ox + Math.floor(x), nx, ny, Math.max(0.05, nz));
   }
@@ -608,7 +614,7 @@ export class Canvas {
     for (let y = Math.floor(Math.min(y0, y1) - R - 1); y <= Math.ceil(Math.max(y0, y1) + R + 1); y++)
       for (let x = Math.floor(Math.min(x0, x1) - R - 1); x <= Math.ceil(Math.max(x0, x1) + R + 1); x++) {
         const t = Math.max(0, Math.min(1, ((x - x0) * dx + (y - y0) * dy) / len2));
-        const vx = x - (x0 + dx * t), vy = y - (y0 + dy * t), rt = r + (r1 - r) * t + 0.5;
+        const vx = x - (x0 + dx * t), vy = y - (y0 + dy * t), rr = r + (r1 - r) * t, rt = rr + (rr < 1.5 ? 0.3 : 0.5);
         const q = (vx * vx + vy * vy) / (rt * rt);
         if (q > 1) continue;
         this.surf(x, y, col, vx / rt, vy / rt, Math.sqrt(1 - q));
@@ -625,10 +631,133 @@ export class Canvas {
     });
   }
 
+  /**
+   * Half ellipsoid standing on its flat base (umbrella canopies, domes, mushroom caps, sign tops):
+   * center of the base (cx, by), radii rx / ry (height). `scallop` = width of a wavy lower edge.
+   */
+  dome(cx: number, by: number, rx: number, ry: number, c: string, opts: DomeOpts = {}): void {
+    const col = this.color(c), sc = opts.scallop ?? 0, d = opts.depth ?? 1;
+    for (let y = Math.floor(by - ry); y <= by + (sc ? 1 : 0); y++)
+      for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) {
+        const dx = (x - cx) / (rx + 0.5), dy = (y - by) / (ry + 0.5), q = dx * dx + dy * dy;
+        if (q > 1 && y <= by) continue;
+        if (y > by) {   // scallops hang below the rim
+          if (!sc || Math.abs(dx) > 1) continue;
+          const ph = ((x - cx + rx) % sc) / sc;
+          if (Math.abs(ph - 0.5) > 0.3) continue;
+        }
+        this.surf(x, y, col, dx * d, (Math.min(0.3, dy) * 0.6 - 0.1) * d, Math.sqrt(Math.max(0.05, 1 - Math.min(1, q))) + 0.25);
+      }
+  }
+
+  /** Ellipsoid filling the box (x, y, w, h) exactly: heads, eggs, fruit, lumps. */
+  oval(x: number, y: number, w: number, h: number, c: string, opts: { depth?: number } = {}): void {
+    const col = this.color(c), d = opts.depth ?? 1, rx = w / 2, ry = h / 2;
+    for (let yy = 0; yy < h; yy++)
+      for (let xx = 0; xx < w; xx++) {
+        const dx = (xx + 0.5 - rx) / rx, dy = (yy + 0.5 - ry) / ry, q = dx * dx + dy * dy;
+        if (q > 1.08) continue;
+        this.surf(x + xx, y + yy, col, dx * d, dy * d, Math.sqrt(Math.max(0, 1 - Math.min(1, q))));
+      }
+  }
+
+  /** Warm light pool: step what's here lighter inside an ellipse, dithered toward the rim (lamp light on walls). */
+  pool(cx: number, cy: number, rx: number, ry: number, opts: ShadowOpts = {}): void {
+    this.ellipseSteps(this.pal.stepMap(1), cx, cy, rx, ry, opts);
+  }
+
+  /** Remove surface normals in a region: what's painted there stays exactly as drawn (glowing panes, labels). */
+  flat(where?: Region): void {
+    const n = this.img.norm;
+    if (!n) return;
+    const ok = regionPred(where);
+    for (let y = -this.oy; y < this.img.h - this.oy; y++)
+      for (let x = -this.ox; x < this.img.w - this.ox; x++)
+        if (ok(x, y) && (!this.clipPred || this.clipPred(x, y))) n[((this.oy + y) * this.img.w + this.ox + x) * 3 + 2] = 0;
+  }
+
+  // ---------------------------------------------------------------- surface textures
+  // They paint seams in step colors onto what's there (only on `on` keys, default any opaque),
+  // keeping the surface normals: draw the material first, then its construction.
+
+  private seam(x: number, y: number, c: Resolved, on?: (x: number, y: number) => boolean): void {
+    if (!on || on(x, y)) this.plot(x, y, c);
+  }
+
+  /** Floorboards / siding / decking: rows of boards `size` px apart with staggered butt joints. */
+  planks(x: number, y: number, w: number, h: number, c: string, opts: TextureOpts = {}): void {
+    const s = opts.size ?? 4, len = opts.len ?? 14, dark = this.color(opts.seam ?? `${c}-1`), lit = this.color(`${c}+1`);
+    const on = opts.on ? this.maskAt(opts.on) : undefined, vert = opts.dir === "v";
+    const W = vert ? h : w, H = vert ? w : h, at = (u: number, v: number, col: Resolved) => vert ? this.seam(x + v, y + u, col, on) : this.seam(x + u, y + v, col, on);
+    for (let v = 0, row = 0; v < H; v += s, row++) {
+      for (let u = 0; u < W; u++) at(u, v, dark);
+      if (s > 2) for (let u = 0; u < W; u++) at(u, v + 1, lit);   // lit lip of each board
+      const off = (row * 5) % len;
+      for (let u = -off; u < W; u += len) if (u > 0) for (let k = 1; k < s; k++) at(u, v + k, dark);
+    }
+  }
+
+  /** Brick / stone courses with offset joints. */
+  bricks(x: number, y: number, w: number, h: number, c: string, opts: TextureOpts = {}): void {
+    const bh = opts.size ?? 3, bw = opts.len ?? 7, dark = this.color(opts.seam ?? `${c}-1`), lit = this.color(`${c}+1`);
+    const on = opts.on ? this.maskAt(opts.on) : undefined;
+    for (let yy = 0, row = 0; yy < h; yy += bh + 1, row++) {
+      for (let xx = 0; xx < w; xx++) this.seam(x + xx, y + yy + bh, dark, on);
+      const off = row % 2 ? Math.floor(bw / 2) : 0;
+      for (let xx = -off; xx < w; xx += bw + 1) {
+        if (xx >= 0) for (let k = 0; k < bh; k++) this.seam(x + xx, y + yy + k, dark, on);
+        if (xx + 1 >= 0 && xx + 1 < w) this.seam(x + xx + 1, y + yy, lit, on);   // a lit corner per brick
+      }
+    }
+  }
+
+  /** Square tiles with grout lines (floors, pools, kitchens). */
+  tiles(x: number, y: number, w: number, h: number, c: string, opts: TextureOpts = {}): void {
+    const s = opts.size ?? 5, dark = this.color(opts.seam ?? `${c}-1`), on = opts.on ? this.maskAt(opts.on) : undefined;
+    for (let yy = 0; yy < h; yy++)
+      for (let xx = 0; xx < w; xx++) if (xx % s === s - 1 || yy % s === s - 1) this.seam(x + xx, y + yy, dark, on);
+  }
+
+  /** Stripes of the given colors, each `size` px wide (awnings, wallpaper, umbrellas, towels). */
+  stripes(x: number, y: number, w: number, h: number, colors: string | string[], opts: TextureOpts = {}): void {
+    const cols = colorList(colors).map((k) => this.color(k)), s = opts.size ?? 2, on = opts.on ? this.maskAt(opts.on) : undefined;
+    for (let yy = 0; yy < h; yy++)
+      for (let xx = 0; xx < w; xx++) {
+        let u = opts.dir === "h" ? yy : opts.dir === "d" ? xx + yy : xx, k: number;
+        if (opts.center) {
+          // Fan: stripes radiate from a point (umbrellas, parasols, sunbursts); size = degrees each.
+          const a = (Math.atan2(y + yy - opts.center[1], x + xx - opts.center[0]) * 180) / Math.PI + 360;
+          k = Math.floor(a / (opts.size ?? 20));
+        } else k = Math.floor(u / s);
+        this.seam(x + xx, y + yy, cols[((k % cols.length) + cols.length) % cols.length], on);
+      }
+  }
+
+  /** Lay assets out in rows from (x, y), wrapping at width w, bottoms aligned (contact sheets, shelves, galleries). */
+  arrange(x: number, y: number, w: number, names: string[], opts: { gap?: number } = {}): void {
+    const gap = opts.gap ?? 4;
+    const imgs = names.flatMap((n) => this.res.candidates(n)).map((n) => this.asset(n));
+    let cx = x, row: Img[] = [], rowX: number[] = [], cy = y;
+    const flush = () => {
+      const rh = Math.max(0, ...row.map((i) => i.h));
+      row.forEach((im, k) => this.put(im, rowX[k], cy + rh - im.h));
+      cy += rh + gap; cx = x; row = []; rowX = [];
+    };
+    for (const im of imgs) {
+      if (row.length && cx + im.w > x + w) flush();
+      row.push(im); rowX.push(cx); cx += im.w + gap;
+    }
+    if (row.length) flush();
+  }
+
   /** Soft contact / drop shadow: step what's here darker inside an ellipse, dithered at the rim. */
   shadow(cx: number, cy: number, rx: number, ry: number, opts: ShadowOpts = {}): void {
+    this.ellipseSteps(this.pal.stepMap(-1), cx, cy, rx, ry, opts);
+  }
+
+  private ellipseSteps(map: Map<Color, Color>, cx: number, cy: number, rx: number, ry: number, opts: ShadowOpts): void {
     const steps = opts.steps ?? 1, soft = Math.max(0, Math.min(1, opts.soft ?? 0.45));
-    const map = this.pal.stepMap(-1), keys = opts.on ? this.maskAt(opts.on) : undefined;
+    const keys = opts.on ? this.maskAt(opts.on) : undefined;
     const e = (x: number, y: number) => ((x - cx) / (rx + 0.5)) ** 2 + ((y - cy) / (ry + 0.5)) ** 2;
     const core = (x: number, y: number) => e(x, y) <= 1 - soft && (!keys || keys(x, y));
     const rim = (x: number, y: number) => { const v = e(x, y); return v > 1 - soft && v <= 1 && (!keys || keys(x, y)); };
@@ -686,7 +815,7 @@ export const OPS = [
   "px", "rect", "box", "line", "hline", "vline", "ellipse", "circ", "ring", "poly", "fill",
   "dither", "grad", "noise", "recolor", "shade", "light",
   "stamp", "tile", "pattern", "tilemap", "scatter", "grid", "wire", "text", "lamp", "bump", "normals",
-  "arch", "ball", "cyl", "block", "tube", "form", "shadow",
+  "arch", "ball", "oval", "dome", "cyl", "block", "tube", "form", "shadow", "pool", "flat", "planks", "bricks", "tiles", "stripes", "arrange",
   "water", "reflect", "foam", "caustics", "palm", "foliage", "cloud", "mountain",
 ] as const;
 export type OpName = (typeof OPS)[number];

@@ -304,10 +304,18 @@ function finish(img: Img, def: AssetDef, pal: Palette, trace?: Trace): Img {
     step("form", () => { applyForm(img, pal, fo); });
   }
   const light = o.form && o.form !== true ? o.form.light : undefined;
-  if (o.outline === "auto") step("outline auto", () => selout(img, pal, light));
-  else if (o.outline) step(`outline ${o.outline}`, () => img.outline(solid(pal, o.outline!), false));
+  if (o.outline === "auto") step("outline auto", () => selout(img, pal, light, o.outlineOpen));
+  else if (o.outline) step(`outline ${o.outline}`, () => openSides(img.outline(solid(pal, o.outline!), false), o.outlineOpen));
   if (o.outline8) step(`outline8 ${o.outline8}`, () => img.outline(solid(pal, o.outline8!), true));
   if (o.crop) step("crop", () => img.crop());
+  return img;
+}
+
+/** Clear the outline row/column on the given sides ("tblr") of an outlined image. */
+function openSides(img: Img, sides?: string): Img {
+  if (!sides) return img;
+  for (let x = 0; x < img.w; x++) { if (sides.includes("b")) img.set(x, img.h - 1, TRANSPARENT); if (sides.includes("t")) img.set(x, 0, TRANSPARENT); }
+  for (let y = 0; y < img.h; y++) { if (sides.includes("l")) img.set(0, y, TRANSPARENT); if (sides.includes("r")) img.set(img.w - 1, y, TRANSPARENT); }
   return img;
 }
 

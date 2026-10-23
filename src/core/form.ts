@@ -76,7 +76,7 @@ export interface MaterialOpts {
   shift?: number;
   /** Lightness of the darkest tone, OKLab L 0..1 (default: base - 0.42, at least 0.14). */
   dark?: number;
-  /** Lightness of the lightest tone (default: base + 0.26, at most 0.96). */
+  /** Lightness of the lightest tone (default: base + up to 0.26, less for light bases, at most 0.96). */
   light?: number;
   /** Hue shadows rotate toward (default 265, blue-violet). */
   cool?: number;
@@ -91,7 +91,7 @@ export function materialRamp(base: Color, o: MaterialOpts = {}): { ramp: Color[]
   const [L, C, h] = toOklch(base);
   const shift = o.shift ?? 1;
   const dark = o.dark ?? Math.max(0.14, Math.min(L - 0.12, L - 0.42));
-  const light = o.light ?? Math.min(0.96, Math.max(L + 0.08, L + 0.26));
+  const light = o.light ?? Math.min(0.96, L + Math.max(0.08, Math.min(0.26, (0.98 - L) * 0.55)));
   const ramp: Color[] = [];
   for (let i = 0; i < n; i++) {
     if (i === at) { ramp.push(base); continue; }
@@ -105,7 +105,7 @@ export function materialRamp(base: Color, o: MaterialOpts = {}): { ramp: Color[]
       const t = (i - at) / Math.max(1, n - 1 - at); // 0 at base .. 1 lightest
       const Li = L + (light - L) * t;
       // Lights: hue toward warm, chroma drops so highlights don't go neon.
-      const Ci = C * (1 - 0.38 * t);
+      const Ci = C * (1 - 0.22 * t);
       ramp.push(fromOklch(Li, Math.max(0, Ci), toward(h, o.warm ?? 90, 0.22 * t * shift)));
     }
   }
@@ -207,14 +207,16 @@ function edge(img: Img, x: number, y: number): boolean {
  * step lighter on the side facing the light. Colors outside any ramp get a dark version of
  * themselves. Grows the canvas by 1 on every side, like outline.
  */
-export function selout(img: Img, pal: Palette, light: LightSpec = "tl"): Img {
+export function selout(img: Img, pal: Palette, light: LightSpec = "tl", open = ""): Img {
   const src = img.pad(1), o = src.copy();
+  const skip = (x: number, y: number) => (open.includes("b") && y === src.h - 1) || (open.includes("t") && y === 0)
+    || (open.includes("l") && x === 0) || (open.includes("r") && x === src.w - 1);
   const L = lightDir(light);
   const op = (x: number, y: number) => src.get(x, y) !== TRANSPARENT;
   const dirs: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
   for (let y = 0; y < src.h; y++)
     for (let x = 0; x < src.w; x++) {
-      if (op(x, y)) continue;
+      if (op(x, y) || skip(x, y)) continue;
       // Narrow gaps inside an object (between bunk levels, chair and table) stay open.
       if ((op(x - 1, y) && (op(x + 1, y) || op(x + 2, y))) || (op(x, y - 1) && (op(x, y + 1) || op(x, y + 2)))) continue;
       let best: Color | undefined, litSide = 0, cnt = 0;
