@@ -73,12 +73,12 @@ H......H`,
 const FACE = {
   // rows 4..7 of the head
   smile: `
-..E..E..
+..G..G..
 ..E..E..
 .C.MM.C.
 _......_`,
   open: `
-..E..E..
+..G..G..
 ..E..E..
 .C.OO.C.
 _......_`,
@@ -93,7 +93,7 @@ _......_`,
 .C.MM.C.
 _......_`,
   right: `
-....E.E.
+....G.G.
 ....E.E.
 ...C.MM.
 _.......`,
@@ -101,7 +101,7 @@ _.......`,
 const head = (x, y, { skin = "h", hair = "l", style = "short", face = "smile" } = {}) => [
   ball(x + 3.5, y + 3.5, 3.6, skin),
   paint(x, y, HAIR[style], { H: hair }),
-  paint(x, y + 4, FACE[face], { E: "k", S: "k", M: skin + "-2", O: "u-1", C: "o+1" }),
+  paint(x, y + 4, FACE[face], { E: "k", G: skin === "H" ? "e" : "k", S: "k", M: skin === "H" ? "u-2" : skin + "-2", O: "u-1", C: "o+1" }),
 ]
 const bun = (x, y, hair = "l") => ball(x + 3.5, y - 1, 1.8, hair)
 const sunhat = (x, y, c = "s", band = "o") => [
@@ -113,7 +113,7 @@ const sunhat = (x, y, c = "s", band = "o") => [
 // ---------------------------------------------------------------- bodies
 // standing body 8 wide, torso top at y (9 rows: y..y+8)
 const legs = (x, y, skin = "h", shoe = "d-1") => [
-  block(x + 2, y + 6, 1, 2, skin, { bevel: 1 }), block(x + 5, y + 6, 1, 2, skin, { bevel: 1 }),
+  block(x + 1, y + 6, 2, 2, skin, { bevel: 1 }), block(x + 5, y + 6, 2, 2, skin, { bevel: 1 }),
   hline(x + 1, y + 8, 2, shoe), hline(x + 5, y + 8, 2, shoe),
 ]
 const armL = (x, y, skin, sleeve) => [block(x, y + 1, 1, 4, skin, { bevel: 1 }), px(x, y + 1, sleeve)]
@@ -132,7 +132,7 @@ P....
 ..P..`, { P: c })
 
 // ---------------------------------------------------------------- receptionist (behind counter)
-const recep = (armUp) => [
+const recep = () => [
   // shoulders + arms reaching down to the counter
   block(0, 9, 1, 4, "h", { bevel: 1 }), block(9, 9, 1, 4, "h", { bevel: 1 }),
   px(0, 9, "r"), px(9, 9, "r"), px(0, 10, "r"), px(9, 10, "r"),
@@ -143,12 +143,11 @@ const recep = (armUp) => [
 ..e..e..
 ......YY`, { e: "e", Y: "y" }),
   px(4, 8, "h"), px(5, 8, "h"),
-  ...(armUp ? [] : []),
 ]
 sprite("ppl_receptionist", { w: 10, h: 13, form: true, outline: "auto" },
   ...recep(), ...head(1, 0, { style: "short" }))
 sprite("ppl_receptionist_b", { w: 10, h: 13, form: true, outline: "auto" },
-  ...recep(), ...head(1, 1, { skin: "H", style: "bob" }), bun(1, 1))
+  ...recep(), ...head(1, 1, { skin: "H", style: "short" }), bun(1, 1))
 
 // waving: right arm raised beside the head, hand swinging
 const waveArm = (dx) => [
@@ -162,18 +161,19 @@ anim("ppl_receptionist_wave", { w: 12, h: 13, fps: 4, form: true, outline: "auto
 
 // ---------------------------------------------------------------- staff
 sprite("ppl_chef", { w: 8, h: 20, form: true, outline: "auto" },
-  ...body(0, 11, "e", "z-1", "h", "z-2"),
-  paint(1, 11, `
-..e.e.
-...e..
-..e.e.
-...e..`, { e: "e-2" }),
+  ...legs(0, 11, "z", "z-2"), ...armL(0, 11, "h", "e"), ...armR(0, 11, "h", "e"),
+  block(0, 12, 1, 2, "e", { bevel: 0 }), block(7, 12, 1, 2, "e", { bevel: 0 }),
+  ...torso(0, 11, "e", "z"),
+  paint(2, 12, `
+.z.z
+....
+.z.z`, { z: "z" }),
   px(3, 11, "u"), px(4, 11, "u"),
   ...head(0, 3, { style: "hat" }),
   ball(2, 1.5, 2, "e"), ball(5, 1.5, 2, "e"), ball(3.5, 1, 2.2, "e"),
   block(1, 3, 6, 2, "e", { bevel: 1 }), hline(1, 4, 6, "e-1"))
 
-sprite("ppl_waiter", { w: 11, h: 17, form: true, outline: "auto" },
+sprite("ppl_waiter", { w: 13, h: 17, form: true, outline: "auto" },
   ...legs(0, 8, "F", "d-2"),
   ...armL(0, 8, "h", "e"),
   ...torso(0, 8, "e", "F"),
@@ -184,12 +184,13 @@ FF..FF
 FF..FF
 FF..FF
 FFFFFF`, { F: "F", K: "u-1" }),
-  // right arm bent up, hand under the tray
-  block(7, 9, 1, 2, "e", { bevel: 0 }), block(8, 8, 1, 3, "h", { bevel: 1 }),
+  // right arm out to the side, forearm up, hand under the tray
+  px(7, 9, "e"), block(8, 9, 2, 1, "e", { bevel: 0 }), block(9, 7, 1, 2, "h", { bevel: 1 }),
   ...head(0, 0, { style: "short" }),
-  // tray + coconut drink
-  block(6, 6, 5, 1, "z+1", { bevel: 1 }),
-  ball(8.5, 4.5, 1.3, "d"), px(9, 3, "y"), px(10, 2, "y"),
+  // tray (held clear of the head) + cocktail glass with straw
+  block(8, 6, 5, 1, "z+1", { bevel: 1 }),
+  block(10, 4, 2, 2, "y", { bevel: 1 }), hline(10, 4, 2, "e"),   // juice glass
+  hline(10, 2, 3, "u"), px(11, 1, "u"), px(11, 3, "e-1"),         // paper umbrella
 )
 
 // ---------------------------------------------------------------- guests
@@ -232,22 +233,24 @@ sprite("ppl_kid", { w: 8, h: 13, form: true, outline: "auto" },
 
 // ---------------------------------------------------------------- lounging (lying on back, head left, propped)
 sprite("ppl_lounging", { w: 20, h: 7, form: true, outline: "auto" },
-  // straight leg + foot
-  block(13, 4, 6, 2, "h", { bevel: 1 }), px(19, 3, "h"), px(19, 4, "h"),
-  // bent leg: thigh up to the knee, shin back down
-  tube(12.5, 3.5, 15, 1, 0.6, "h"), tube(15, 1, 17, 3.5, 0.5, "h"),
+  // far leg straight (one step darker = behind), foot tipped up
+  block(13, 5, 6, 2, "h", { bevel: 1 }), block(19, 4, 1, 2, "h", { bevel: 0 }),
   // torso, trunks
-  block(5, 3, 7, 3, "h", { bevel: 1 }),
-  block(11, 3, 3, 3, "F", { bevel: 1 }), hline(11, 3, 3, "F+1"),
-  // arm along the body
-  hline(6, 5, 5, "h-1"), px(11, 5, "h"),
-  // head on a pillow-ish tilt
-  ball(3, 3, 2.8, "h"),
+  block(5, 3, 3, 4, "h", { bevel: 1 }),
+  block(8, 3, 5, 4, "b", { bevel: 1 }), px(8, 3, "h"),   // one-piece swimsuit
+
+  // near leg: thigh up to the knee, shin back down to the towel
+  tube(12.5, 3.5, 15, 0.5, 0.45, "h"), tube(15.5, 0.5, 17, 4, 0.4, "h"), px(17, 4, "_"),
+  // arm resting on the belly
+  px(8, 5, "h"), px(9, 5, "h"),
+  // head
+  ball(3, 3.5, 2.9, "h"),
   paint(0, 0, `
 .HHH.
 HHHHH
 HHH..
 HH...
+H....
 H....`, { H: "l" }),
   paint(3, 2, `
 SSS
@@ -257,7 +260,7 @@ SSS
 // ---------------------------------------------------------------- swimmers (bottom edge = waterline)
 sprite("_swim_a", { w: 10, h: 9, form: true, outline: "auto" },
   block(0, 7, 10, 2, "H", { bevel: 1 }),
-  ...head(1, 0, { skin: "H", style: "wet", hair: "l-1", face: "smile" }))
+  ...head(1, 0, { skin: "H", style: "wet", hair: "l", face: "smile" }))
 sprite("_swim_b", { w: 10, h: 9, form: true, outline: "auto" },
   block(0, 7, 10, 2, "h", { bevel: 1 }), hline(2, 8, 2, "t"), hline(6, 8, 2, "t"),
   ...head(1, 0, { style: "bob", hair: "L-1", face: "closed" }))
@@ -273,19 +276,29 @@ sprite("_swim_ring", { w: 12, h: 9, form: true, outline: "auto" },
   block(1, 6, 1, 1, "h", { bevel: 0 }), block(10, 6, 1, 1, "h", { bevel: 0 }))
 sprite("ppl_swimmer_ring", { w: 14, h: 10 }, stamp("_swim_ring", 0, 0))
 
-// ---------------------------------------------------------------- sitting (side view facing right, seat at y 9..10)
-sprite("ppl_sitting", { w: 10, h: 14, form: true, outline: "auto" },
-  block(1, 7, 4, 4, "t", { bevel: 1 }),                    // torso
-  block(2, 9, 6, 2, "E", { bevel: 1 }),                    // thigh forward
-  block(7, 10, 1, 3, "h", { bevel: 1 }),                   // shin
-  hline(7, 13, 3, "d-1"),                                  // shoe
-  tube(3, 8, 5.5, 9, 0.5, "h"), px(3, 8, "t"),             // arm on lap
+// ---------------------------------------------------------------- sitting (side view facing right)
+// seat top at y 11 (thighs rest there), feet at y 14
+sprite("ppl_sitting", { w: 10, h: 15, form: true, outline: "auto" },
+  block(1, 7, 5, 4, "t", { bevel: 1 }),                    // torso
+  block(2, 10, 6, 2, "b", { bevel: 1 }),                   // thigh forward (jeans)
+  block(6, 12, 2, 2, "h", { bevel: 1 }),                   // shin
+  hline(6, 14, 3, "d-1"),                                  // shoe
+  block(3, 8, 1, 2, "t+1", { bevel: 0 }), block(4, 9, 3, 1, "h", { bevel: 1 }),   // arm on lap
   ...head(0, 0, { style: "side", face: "right" }))
 
 // ---------------------------------------------------------------- sheet
-const ALL = ["ppl_receptionist", "ppl_receptionist_b", "ppl_receptionist_wave", "ppl_chef", "ppl_waiter",
-  "ppl_guest_a", "ppl_guest_b", "ppl_guest_c", "ppl_kid", "ppl_sitting", "ppl_lounging",
-  "ppl_swimmer_a", "ppl_swimmer_b", "ppl_swimmer_ring"]
-scene("ppl_sheet", { w: 300, h: 40, bg: "c+1" },
-  rect(0, 30, 300, 10, "w"),
-  ...ALL.map((n, i) => stamp(n, 4 + i * 21, 8)))
+// final sizes after outline (w, h); everything stands on the floor line, 4px apart
+const SIZES = [
+  ["ppl_receptionist", 12, 15], ["ppl_receptionist_b", 12, 15], ["ppl_receptionist_wave", 14, 15],
+  ["ppl_chef", 10, 22], ["ppl_waiter", 15, 19], ["ppl_guest_a", 12, 20], ["ppl_guest_b", 12, 20],
+  ["ppl_guest_c", 13, 20], ["ppl_kid", 10, 15], ["ppl_sitting", 12, 17], ["ppl_lounging", 22, 9],
+  ["ppl_swimmer_a", 12, 10], ["ppl_swimmer_b", 12, 10], ["ppl_swimmer_ring", 14, 10],
+]
+const FLOOR = 32
+const placed = []
+SIZES.reduce((x, [n, w, h]) => { placed.push([n, x, w, h]); return x + w + 4 }, 4)
+const sheetW = placed.at(-1)[1] + placed.at(-1)[2] + 4
+scene("ppl_sheet", { w: sheetW, h: 42, bg: "c+1" },
+  rect(0, FLOOR, sheetW, 10, "w"), hline(0, FLOOR, sheetW, "w+1"),
+  ...placed.filter(([n]) => !/swimmer|receptionist/.test(n)).map(([n, x, w]) => shadow(x + w / 2 - 0.5, FLOOR, w / 2 - 1, 1)),
+  ...placed.map(([n, x, w, h]) => stamp(n, x, FLOOR - h + (/swimmer|receptionist|lounging/.test(n) ? 0 : 1))))
