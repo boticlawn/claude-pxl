@@ -40,22 +40,22 @@ sprite("room_bed_twin", { ...S, w: 18, h: 12 },
   px(12, 8, "t+1"), px(15, 8, "t+1"))
 
 sprite("room_bunk", { ...S, w: 18, h: 24 },
-  // posts
-  tube(1, 1, 1, 23, 1, "w"), tube(16, 1, 16, 23, 1, "w"),
-  // upper bunk: rail, mattress, blue blanket
-  block(2, 8, 14, 2, "w", { bevel: 1 }),
-  block(2, 4, 14, 4, "e", { bevel: 1 }), ball(5, 3, 2, "e", { ry: 1.5 }),
-  block(8, 4, 8, 5, "b", { bevel: 1 }), hline(8, 4, 8, "e"), px(10, 7, "b+1"), px(13, 7, "b+1"),
-  hline(2, 2, 14, "w"), hline(2, 3, 14, "w-1"),
+  // shadowed inside of the frame (back panel) so the bunks read as a box, no pin-holes
+  rect(2, 3, 12, 6, "d-1"), rect(2, 10, 12, 9, "d-1"),
+  // posts with brass caps
+  block(0, 1, 2, 23, "w", { bevel: 1 }), block(14, 1, 2, 23, "w", { bevel: 1 }),
+  // upper bunk: guard rail, mattress, blue blanket, rail
+  block(2, 2, 12, 2, "w", { bevel: 1 }), vline(5, 2, 2, "w-1"), vline(8, 2, 2, "w-1"), vline(11, 2, 2, "w-1"),
+  block(2, 5, 12, 3, "e", { bevel: 1 }), ball(4, 4.5, 2, "e", { ry: 1.2 }),
+  block(7, 5, 7, 4, "b", { bevel: 1 }), hline(7, 5, 7, "e"), px(9, 7, "b+1"), px(12, 7, "b+1"),
+  block(2, 8, 12, 2, "w", { bevel: 1 }), hline(2, 9, 12, "w-1"),
   // lower bunk: teal
-  block(2, 19, 14, 2, "w", { bevel: 1 }),
-  block(2, 15, 14, 4, "e", { bevel: 1 }), ball(5, 14, 2, "e", { ry: 1.5 }),
-  block(8, 15, 8, 5, "t", { bevel: 1 }), hline(8, 15, 8, "e"), px(10, 18, "t+1"), px(13, 18, "t+1"),
-  // ladder on the right
-  vline(12, 9, 14, "d"), vline(15, 9, 14, "d"),
-  hline(13, 11, 2, "d+1"), hline(13, 14, 2, "d+1"), hline(13, 17, 2, "d+1"), hline(13, 22, 2, "d+1"),
-  // post caps
-  ball(1, 1, 1, "y"), ball(16, 1, 1, "y"))
+  block(2, 15, 12, 3, "e", { bevel: 1 }), ball(4, 14.5, 2, "e", { ry: 1.2 }),
+  block(7, 15, 7, 4, "t", { bevel: 1 }), hline(7, 15, 7, "e"), px(9, 17, "t+1"), px(12, 17, "t+1"),
+  block(2, 18, 12, 2, "w", { bevel: 1 }), hline(2, 19, 12, "w-1"),
+  ball(1, 1, 1.2, "y"), ball(15, 1, 1.2, "y"),
+  // ladder leaning on the right post
+  line(16, 3, 17, 23, "d"), (c) => { for (const y of [6, 11, 16, 21]) c.px(16 + (y > 12 ? 1 : 0), y, "d+1") })
 
 sprite("room_nightstand", { ...S, w: 7, h: 8 },
   block(0, 0, 7, 7, "w", { top: 2, bevel: 1 }),
@@ -67,16 +67,19 @@ sprite("room_lamp_table", { ...S, w: 5, h: 9 },
   cyl(0, 0, 5, 4, "e", { taper: -1, cap: 1 }), hline(0, 3, 5, "o"),
   tube(2, 4, 2, 7, 0.6, "y"), cyl(1, 7, 3, 2, "y", { cap: 1 }))
 
-sprite("room_lamp_pendant", { ...S, w: 5, h: 14 },
-  vline(2, 0, 8, "d-1"), px(2, 7, "y-1"),
-  cyl(0, 8, 5, 5, "y", { taper: -1, cap: 1 }),
-  hline(1, 13, 3, "y+2"),
-  glow("y+2", { r: 3, strength: 0.5 }))
+sprite("_pendant_shade", { ...S, w: 7, h: 14 },
+  cyl(2, 7, 3, 2, "d", { cap: 0 }),
+  cyl(0, 9, 7, 4, "y", { taper: -2, cap: 0 }), hline(1, 9, 5, "y-1"),
+  hline(0, 13, 7, "y+2"), glow("y+2", { r: 3, strength: 0.4 }))
+// the cord is drawn on the outlined result so it stays 1px thin
+sprite("room_lamp_pendant", { base: "_pendant_shade" }, vline(4, 0, 8, "d-2"))
 
-sprite("room_fan", { ...S, w: 22, h: 6 },
-  rect(10, 0, 2, 2, "y-1"), vline(10, 0, 3, "z"), vline(11, 0, 3, "z"),
-  tube(1, 4, 8, 3, 1, "d", { r1: 1.2 }), tube(13, 3, 20, 4, 1.2, "d", { r1: 1 }),
-  ball(10.5, 3, 2.5, "y", { ry: 1.5 }), ball(10.5, 5, 1.5, "e", { ry: 1 }))
+sprite("_fan", { ...S, w: 22, h: 6 },
+  // thin blades with a lit top edge, brass motor housing, glass light below
+  tube(9, 3, 1, 4, 0.8, "d", { r1: 1.1 }), tube(13, 3, 21, 4, 0.8, "d", { r1: 1.1 }),
+  cyl(8, 2, 6, 3, "y", { cap: 0, bulge: 1 }), hline(8, 3, 6, "y-1"),
+  ball(11, 5, 1.5, "e", { ry: 1 }))
+sprite("room_fan", { base: "_fan" }, rect(11, 0, 2, 3, "z-1"), hline(11, 0, 2, "z"))
 
 // ---------------------------------------------------------------- wall decor
 sprite("room_picture_wide", { ...S, w: 16, h: 10 },
@@ -90,23 +93,26 @@ sprite("room_picture_wide", { ...S, w: 16, h: 10 },
 
 sprite("room_picture_tall", { ...S, w: 8, h: 10 },
   block(0, 0, 8, 10, "d", { bevel: 1 }),
-  rect(2, 2, 4, 6, "c+1"),
-  line(3, 8, 4, 4, "w-1"), px(4, 3, "g"), px(2, 3, "g"), px(3, 2, "g"), px(5, 2, "g"), px(5, 4, "g-1"), px(2, 4, "g-1"), px(4, 2, "g+1"),
-  hline(2, 7, 4, "s"))
+  rect(1, 1, 6, 8, "a+2"), rect(1, 7, 6, 2, "s"), hline(1, 6, 6, "q"),
+  line(3, 8, 4, 3, "w-1"),
+  hline(2, 2, 4, "g"), px(1, 3, "g-1"), px(6, 3, "g-1"), px(4, 1, "g"), px(5, 3, "g"), px(3, 3, "g-1"),
+  px(5, 1, "e"))
 
 sprite("room_mirror_round", { ...S, w: 9, h: 9 },
   ball(4, 4, 4, "w"), (c) => { for (let a = 0; a < 16; a += 2) c.px(Math.round(4 + 4 * Math.cos(a * Math.PI / 8)), Math.round(4 + 4 * Math.sin(a * Math.PI / 8)), "w-1") },
   circ(4, 4, 2, "j"), px(3, 3, "j+2"), px(4, 2, "j+1"), px(2, 4, "j+1"))
 
-sprite("room_shelf", { ...S, w: 16, h: 7 },
-  // books
-  block(1, 1, 2, 4, "b", { bevel: 0 }), block(3, 0, 2, 5, "o"), block(5, 2, 2, 3, "t"), line(7, 4, 9, 2, "y", 2),
-  // jar with lid
-  cyl(11, 2, 3, 3, "j", { cap: 1 }), hline(11, 1, 3, "d"), px(12, 3, "y"),
-  // tiny succulent
-  ball(15, 2, 1, "g"),
-  rect(14, 3, 2, 2, "x"),
-  block(0, 5, 16, 2, "d", { bevel: 1 }))
+sprite("room_shelf", { ...S, w: 16, h: 6 },
+  // books (flat spines with a lit left edge), one leaning
+  rect(1, 0, 2, 4, "b"), vline(1, 0, 4, "b+1"), hline(1, 1, 2, "y"),
+  rect(3, 1, 2, 3, "o"), vline(3, 1, 3, "o+1"), hline(3, 2, 2, "e"),
+  rect(5, 0, 1, 4, "t"),
+  line(6, 3, 8, 1, "y"), line(7, 3, 9, 1, "y-1"),
+  // jar with lid and shells
+  cyl(10, 1, 3, 3, "j", { cap: 0 }), hline(10, 0, 3, "d"), px(11, 2, "o+1"), px(10, 3, "s"),
+  // tiny succulent pot
+  rect(14, 2, 2, 2, "x"), ball(14.5, 1, 1.2, "g"),
+  block(0, 4, 16, 2, "d", { bevel: 1 }))
 
 // ---------------------------------------------------------------- plants
 sprite("room_plant_small", { ...S, w: 8, h: 12 },
@@ -127,36 +133,50 @@ sprite("room_plant_big", { ...S, w: 14, h: 22 },
   cyl(3, 15, 8, 7, "x", { cap: 1, taper: 1, capColor: "x-1" }), hline(3, 17, 8, "x+1"))
 
 sprite("room_plant_palm", { ...S, w: 12, h: 24 },
-  palm(6, 17, { h: 15, lean: 1, len: 7, fronds: 7, trunk: "w", leaf: "g" }),
-  cyl(2, 16, 8, 8, "x", { cap: 1, taper: 1, capColor: "x-1" }), hline(2, 18, 8, "x+1"))
+  // slender ringed trunk
+  (c) => { for (let y = 8; y < 18; y++) c.rect(Math.round(5 + (17 - y) * 0.08), y, 2, 1, y % 2 ? "w" : "w-1") },
+  // drooping fronds: tapered tubes from the crown, back ones darker
+  tube(6, 7, 1, 6, 1, "g-1", { r1: 0.4 }), tube(6, 7, 11, 5, 1, "g-1", { r1: 0.4 }),
+  tube(6, 7, 2, 2, 1.1, "g", { r1: 0.4 }), tube(6, 7, 10, 1, 1.1, "g", { r1: 0.4 }),
+  tube(6, 7, 0, 10, 1.1, "g", { r1: 0.4 }), tube(6, 7, 11, 11, 1.1, "g", { r1: 0.4 }),
+  tube(6, 7, 6, 0, 1, "g", { r1: 0.4 }),
+  // leaflet notches along the fronds
+  px(3, 8, "g-2"), px(9, 9, "g-2"), px(3, 4, "g+1"), px(9, 3, "g+1"),
+  ball(6, 7, 1.3, "w-1"),
+  cyl(3, 17, 6, 7, "x", { cap: 0, taper: 1 }), block(2, 16, 8, 2, "x", { bevel: 1 }), hline(2, 17, 8, "x-1"), px(4, 20, "x+1"))
 
 sprite("room_vine", { ...S, w: 6, h: 28 },
   (c) => {
-    for (let y = 0; y < 28; y++) c.px(Math.round(2.5 + Math.sin(y / 3.5) * 1.2), y, "v")
+    const sx = (y) => Math.round(2.5 + Math.sin(y / 4) * 1.2)
+    for (let y = 0; y < 27; y++) c.px(sx(y), y, "v")
+    let side = -1
     for (let y = 2; y < 27; y += 3) {
-      const x = Math.round(2.5 + Math.sin(y / 3.5) * 1.2), side = (y / 3) % 2 < 1 ? -1 : 1
-      c.ball(x + side * 1.5, y + 1, 1.5, y % 2 ? "g" : "v+1", { ry: 1 })
+      const x = sx(y)
+      c.tube(x, y, x + side * 2.5, y + 2, 1.1, y % 2 ? "g" : "v+1", { r1: 0.4 })
+      side = -side
     }
   },
-  px(4, 9, "f"), px(1, 18, "f"), px(4, 24, "f+1"))
+  px(4, 9, "f"), px(1, 17, "f"), px(4, 24, "f+1"))
 
 // ---------------------------------------------------------------- seating
 sprite("room_armchair", { ...S, w: 12, h: 11, mx: true },
-  // rattan back + arm
-  block(1, 0, 5, 8, "w", { bevel: 1 }), ball(4, 2, 3, "w", { ry: 2 }), weave(2, 1, 4, 5),
-  block(0, 4, 3, 6, "w", { bevel: 1 }), hline(0, 5, 3, "w-1"), hline(0, 7, 3, "w-1"),
-  // cushion
-  block(3, 5, 3, 3, "t", { bevel: 1 }), hline(3, 7, 3, "t-1"), px(3, 3, "t"), px(4, 3, "t"), px(5, 3, "t"), px(5, 4, "t"), px(4, 4, "t"), px(3, 4, "t"),
-  rect(1, 10, 1, 1, "d"), rect(5, 9, 1, 2, "w-2"))
+  // round rattan back with horizontal wicker rows
+  ball(6, 4.5, 6, "w", { ry: 4.5 }),
+  (c) => { for (let y = 1; y < 9; y += 2) c.hline(0, y, 6, "w-1") },
+  // cushions
+  block(2, 3, 4, 3, "t", { bevel: 1 }), block(2, 6, 4, 2, "t", { bevel: 1 }), hline(2, 6, 4, "t+1"), px(4, 4, "t+1"),
+  // arm and legs
+  block(0, 5, 2, 4, "w", { bevel: 1 }), px(0, 6, "w-1"), px(0, 8, "w-1"),
+  hline(1, 8, 5, "w-1"), rect(1, 9, 1, 2, "d"))
 
 sprite("room_sofa", { ...S, w: 26, h: 10, mx: true },
-  block(1, 0, 12, 6, "t", { bevel: 1 }),                    // back
-  block(0, 3, 4, 6, "t", { bevel: 1 }), ball(2, 3, 2, "t"),    // arm
-  block(3, 2, 5, 4, "t", { bevel: 1 }), vline(8, 2, 4, "t-1"), // back cushions
-  block(8, 2, 5, 4, "t", { bevel: 1 }),
-  block(4, 5, 9, 3, "t", { bevel: 1 }), vline(12, 5, 3, "t-1"), // seat cushions
-  hline(0, 8, 13, "t-1"),
-  ball(6, 4, 2, "o"), px(6, 4, "o+1"),                       // throw pillow
+  block(1, 0, 12, 8, "t", { bevel: 1 }),                       // body
+  vline(12, 1, 4, "t-1"), hline(2, 4, 11, "t-1"),               // cushion seams
+  px(9, 2, "t-1"),                                              // button
+  hline(3, 5, 10, "t+1"), vline(12, 5, 3, "t-1"),                // seat front + seam
+  block(0, 3, 3, 6, "t", { bevel: 1 }), hline(0, 3, 3, "t+1"), hline(0, 7, 3, "t-1"),  // arm
+  block(3, 2, 3, 3, "o", { bevel: 1 }), px(4, 3, "o+1"),          // throw pillow
+  hline(0, 8, 13, "t-2"),
   rect(1, 9, 1, 1, "d"), rect(12, 9, 1, 1, "d"))
 
 // ---------------------------------------------------------------- storage
@@ -168,9 +188,12 @@ sprite("room_wardrobe", { ...S, w: 12, h: 26 },
   px(5, 13, "y"), px(7, 13, "y"),
   rect(1, 25, 2, 1, "d"), rect(9, 25, 2, 1, "d"))
 
-sprite("room_suitcase", { ...S, w: 6, h: 8 },
-  hline(2, 0, 2, "z"), px(1, 1, "z"), px(4, 1, "z"),
-  block(0, 2, 6, 6, "o", { bevel: 1 }), vline(2, 2, 6, "d"), vline(3, 2, 6, "d"), px(4, 4, "y"), px(1, 5, "e"))
+sprite("_suitcase", { ...S, w: 6, h: 8 },
+  block(0, 2, 6, 6, "o", { bevel: 1 }), hline(0, 4, 6, "o-1"),
+  vline(1, 2, 6, "d"), vline(4, 2, 6, "d"), px(1, 4, "y"), px(4, 4, "y"),   // straps + buckles
+  px(2, 6, "e"), px(3, 6, "t"))                                         // travel stickers
+// handle drawn after the outline so it stays a thin loop
+sprite("room_suitcase", { base: "_suitcase" }, hline(3, 1, 2, "z-1"), px(2, 2, "z-1"), px(5, 2, "z-1"))
 
 sprite("room_surfboard", { ...S, w: 5, h: 22 },
   ball(2, 11, 2.5, "e", { ry: 11 }), vline(2, 1, 20, "u"), hline(0, 15, 5, "t"), hline(0, 16, 5, "t-1"))
@@ -228,13 +251,14 @@ sprite("room_buffet", { ...S, w: 56, h: 13 },
   (c) => { for (let x = 2; x < 56; x += 4) c.px(x, 12, "t") })
 
 sprite("room_table_dining", { ...S, w: 18, h: 12, mx: true },
-  // chair (left, facing in)
-  block(0, 1, 2, 11, "w", { bevel: 0 }), weave(0, 2, 2, 4),
-  block(0, 7, 5, 2, "w", { bevel: 1 }), vline(4, 9, 3, "w-1"),
-  // table
-  block(3, 5, 6, 2, "d", { bevel: 1 }), vline(8, 7, 5, "d"), hline(6, 11, 3, "d"),
-  // vase + flowers
-  cyl(8, 3, 1, 2, "j"), px(8, 1, "f"), px(7, 0, "f+1"), px(8, 2, "g"), px(7, 2, "y"))
+  // chair facing the table: tall back, cushioned seat, legs
+  block(0, 1, 2, 11, "w", { bevel: 1 }), ball(1, 1, 1, "w"), px(0, 3, "w-1"), px(0, 5, "w-1"),
+  block(1, 7, 3, 2, "t", { bevel: 1 }), vline(3, 9, 3, "w-1"),
+  // table: wide top with cloth edge + pedestal
+  block(4, 5, 5, 2, "d", { bevel: 1 }), hline(4, 6, 5, "e"), rect(8, 7, 1, 4, "d"), hline(6, 11, 3, "d"),
+  // vase + flowers, plate
+  cyl(8, 3, 2, 2, "j", { cap: 0 }), px(8, 1, "f"), px(9, 0, "f+1"), px(8, 2, "g"), px(7, 1, "g"),
+  hline(5, 4, 2, "e"))
 
 sprite("room_rug", { ...S, w: 24, h: 3 },
   block(1, 0, 22, 3, "o", { bevel: 1 }), hline(2, 1, 20, "e"),
@@ -242,20 +266,14 @@ sprite("room_rug", { ...S, w: 24, h: 3 },
   px(0, 0, "e"), px(0, 2, "e"), px(23, 0, "e"), px(23, 2, "e"))
 
 // ---------------------------------------------------------------- overview
-const ROOM = [
-  "room_bed_double", "room_bed_double_coral", "room_bed_twin", "room_bunk", "room_wardrobe", "room_door_arch", "room_window_arch",
-  "room_nightstand", "room_lamp_table", "room_lamp_pendant", "room_fan", "room_mirror_round", "room_picture_wide", "room_picture_tall",
-  "room_plant_small", "room_plant_big", "room_plant_palm", "room_vine", "room_armchair", "room_sofa", "room_shelf",
-  "room_desk_reception", "room_buffet", "room_table_dining", "room_rug", "room_suitcase", "room_surfboard",
-]
 
 // final sizes (after outline), used to lay out the overview grid
 const SZ = {
   room_bed_double: [30, 16], room_bed_double_coral: [30, 16], room_bed_twin: [20, 14], room_bunk: [20, 26],
   room_wardrobe: [14, 28], room_door_arch: [16, 30], room_window_arch: [14, 24], room_nightstand: [9, 10],
-  room_lamp_table: [7, 11], room_lamp_pendant: [7, 16], room_fan: [24, 8], room_mirror_round: [11, 11],
+  room_lamp_table: [7, 11], room_lamp_pendant: [9, 16], room_fan: [24, 8], room_mirror_round: [11, 11],
   room_picture_wide: [18, 12], room_picture_tall: [10, 12], room_plant_small: [10, 14], room_plant_big: [16, 24],
-  room_plant_palm: [14, 26], room_vine: [8, 30], room_armchair: [14, 13], room_sofa: [28, 12], room_shelf: [18, 9],
+  room_plant_palm: [14, 26], room_vine: [8, 30], room_armchair: [14, 13], room_sofa: [28, 12], room_shelf: [18, 8],
   room_desk_reception: [42, 14], room_buffet: [58, 15], room_table_dining: [20, 14], room_rug: [26, 5],
   room_suitcase: [8, 10], room_surfboard: [7, 24],
 }
