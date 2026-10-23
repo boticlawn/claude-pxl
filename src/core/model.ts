@@ -58,6 +58,8 @@ export interface AssetOpts {
   outline8?: string;
   /** Sides that get no outline ("b" = bottom: things standing in water or cut by a frame). */
   outlineOpen?: string;
+  /** false: ignore the project's ink() for this asset (pure colored sel-out, no inner lines). */
+  ink?: boolean;
   /** Form-shade the finished asset (after mirror/flip/rot, before outline). */
   form?: boolean | import("./form.ts").FormOpts;
   crop?: boolean;
@@ -143,8 +145,20 @@ export interface PlaceOpts {
   delay?: number;
   /** Animated assets: random start time per placement (true), seeded like other picks. */
   rdelay?: boolean;
+  /** stamp: drop shadow onto what's behind (walls, floors): true or { dx, dy, steps, density }. */
+  cast?: boolean | CastOpts;
   /** stamp: which point of the sprite (x, y) is: "tl" (default), "t", "tr", "l", "c", "r", "bl", "b", "br". */
   anchor?: "tl" | "t" | "tr" | "l" | "c" | "r" | "bl" | "b" | "br";
+}
+
+export interface CastOpts {
+  /** Offset away from the light in px (default 2, 1: down-right for top-left light). */
+  dx?: number;
+  dy?: number;
+  /** Ramp steps darker (default 1). */
+  steps?: number;
+  /** 0..1 dithered coverage for soft shadows (default 1). */
+  density?: number;
 }
 
 export interface ScatterOpts extends PlaceOpts {

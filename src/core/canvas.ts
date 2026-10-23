@@ -3,7 +3,7 @@ import { Img } from "./image.ts";
 import type { Palette, Resolved } from "./palette.ts";
 import { PxError } from "./errors.ts";
 import { glyph, lineWidth } from "./font.ts";
-import type { BallOpts, BlockOpts, BumpOpts, CylOpts, DomeOpts, LampOpts, ShadowOpts, TextureOpts, TubeOpts, PlaceOpts, ScatterOpts, TextOpts, Timeline, TilemapOpts, WireOpts } from "./model.ts";
+import type { BallOpts, BlockOpts, CastOpts, BumpOpts, CylOpts, DomeOpts, LampOpts, ShadowOpts, TextureOpts, TubeOpts, PlaceOpts, ScatterOpts, TextOpts, Timeline, TilemapOpts, WireOpts } from "./model.ts";
 import { bump, dirOf, setNormal } from "./normals.ts";
 import { applyForm, type FormOpts } from "./form.ts";
 import * as N from "./nature.ts";
@@ -156,6 +156,11 @@ export class Canvas {
   px(x: number, y: number, c: string): void {
     const b = this.blk(), col = this.color(c);
     for (let j = 0; j < b; j++) for (let i = 0; i < b; i++) this.plot(Math.floor(x) * b + i, Math.floor(y) * b + j, col);
+  }
+
+  /** One real pixel, whatever the detail: fine highlights, eyes, stitches, glints under detail(k). */
+  dot(x: number, y: number, c: string): void {
+    this.plot(Math.round(x), Math.round(y), this.color(c));
   }
 
   /** Block size for pixel-exact ops (px, grid, normals): k when called from an art file, else 1. */
@@ -390,7 +395,38 @@ export class Canvas {
     // anchor: which point of the sprite (x, y) refers to. "b" = bottom-center (feet, pots, posts).
     const ax = a.includes("l") ? 0 : a.includes("r") ? src.w - 1 : Math.floor(src.w / 2);
     const ay = a.startsWith("t") ? 0 : a.startsWith("b") ? src.h - 1 : a === "l" || a === "r" || a === "c" ? Math.floor(src.h / 2) : 0;
+    if (opts?.cast) this.castShadow(src, x - ax, y - ay, opts.cast === true ? {} : opts.cast);
     this.put(src, x - ax, y - ay);
+  }
+
+  /**
+   * Drop shadow of `src` (placed at x, y) onto what's behind it, offset away from the light:
+   * steps the wall/floor darker along its ramp. Works across layers (reads the composite below).
+   */
+  castShadow(src: Img, x: number, y: number, o: CastOpts = {}): void {
+    const dx = o.dx ?? 2, dy = o.dy ?? 1, steps = o.steps ?? 1, density = o.density ?? 1;
+    const map = this.pal.stepMap(-1), hits: [number, number, Color][] = [];
+    for (let yy = 0; yy < src.h; yy++)
+      for (let xx = 0; xx < src.w; xx++) {
+        if (src.data[yy * src.w + xx] === TRANSPARENT) continue;
+        const tx = x + xx + dx, ty = y + yy + dy;
+        // Not where the object itself will cover it.
+        const sx = xx + dx, sy = yy + dy;
+        if (sx >= 0 && sy >= 0 && sx < src.w && sy < src.h && src.data[sy * src.w + sx] !== TRANSPARENT) continue;
+        if (density < 1 && bayer(tx, ty) >= density) continue;
+        const own = this.img.get(this.ox + tx, this.oy + ty);
+        let c = own !== TRANSPARENT ? own : this.below?.get(this.ox + tx, this.oy + ty) ?? TRANSPARENT;
+        if (c === TRANSPARENT) continue;
+        for (let s = 0; s < steps; s++) c = map.get(c) ?? c;
+        hits.push([tx, ty, c]);
+      }
+    const seen = new Set<number>();
+    for (const [hx, hy, c] of hits) {
+      const key = hy * 65536 + hx;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      this.plot(hx, hy, c);
+    }
   }
 
   tile(name: string, x: number, y: number, cols = 1, rows = 1, opts?: PlaceOpts): void {
@@ -853,7 +889,7 @@ export const OPS = [
   "px", "rect", "box", "line", "hline", "vline", "ellipse", "circ", "ring", "poly", "fill",
   "dither", "grad", "noise", "recolor", "shade", "light",
   "stamp", "tile", "pattern", "tilemap", "scatter", "grid", "wire", "text", "lamp", "bump", "normals",
-  "arch", "ball", "oval", "dome", "cyl", "block", "tube", "form", "shadow", "pool", "flat", "planks", "bricks", "tiles", "stripes", "arrange",
+  "dot", "arch", "ball", "oval", "dome", "cyl", "block", "tube", "form", "shadow", "pool", "flat", "planks", "bricks", "tiles", "stripes", "arrange",
   "water", "reflect", "foam", "caustics", "palm", "foliage", "cloud", "mountain",
 ] as const;
 export type OpName = (typeof OPS)[number];

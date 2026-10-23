@@ -5,7 +5,7 @@ import { type Color, TRANSPARENT } from "./color.ts";
 import { PxError, wrap } from "./errors.ts";
 import { Img } from "./image.ts";
 import { applyGlow } from "./glow.ts";
-import { applyForm, selout } from "./form.ts";
+import { applyForm, innerLines, type Ink, selout } from "./form.ts";
 import { hazeImg } from "./nature.ts";
 import { scaleArgs } from "./detail.ts";
 import { applyLighting } from "./light.ts";
@@ -18,6 +18,8 @@ import { bayer, fmtArgs, gridRows, gridSize, type Region } from "./util.ts";
 export interface BuildCtx extends Resolver {
   /** detail(k): render scale (1 = logical pixels). */
   detail?: number;
+  /** ink(): line color for outline "auto" + inner lines. */
+  ink?: import("./form.ts").Ink;
   /** Art-file location from an error stack, if any frame points into an art file. */
   locFromStack(stack: string): string | undefined;
   /** Art-file location of the current call site. */
@@ -216,7 +218,7 @@ export function buildAsset(ctx: BuildCtx, def: AssetDef, seed: number, trace?: T
     snap?.(`layer '${l.name}'${l.opts.hidden ? " (hidden)" : ""}`, l.loc);
   });
 
-  const img = finish(base, def, pal, trace);
+  const img = finish(base, def, pal, trace, def.opts.ink === false ? undefined : ctx.ink);
   trace?.finish(img);
   return { img, layers, trace, anim: tl };
 }
@@ -290,7 +292,7 @@ function inferSize(items: Item[]): { w: number; h: number } {
   return { w, h };
 }
 
-function finish(img: Img, def: AssetDef, pal: Palette, trace?: Trace): Img {
+function finish(img: Img, def: AssetDef, pal: Palette, trace?: Trace, ink?: Ink): Img {
   const o = def.opts;
   const step = (label: string, f: () => Img | void) => {
     const r = f();
@@ -313,7 +315,8 @@ function finish(img: Img, def: AssetDef, pal: Palette, trace?: Trace): Img {
     step("form", () => { applyForm(img, pal, fo); });
   }
   const light = o.form && o.form !== true ? o.form.light : undefined;
-  if (o.outline === "auto") step("outline auto", () => selout(img, pal, light, o.outlineOpen));
+  if (o.outline === "auto" && ink && ink.inner > 0) step("inner lines", () => { innerLines(img, pal, ink); });
+  if (o.outline === "auto") step("outline auto", () => selout(img, pal, light, o.outlineOpen, ink));
   else if (o.outline) step(`outline ${o.outline}`, () => openSides(img.outline(solid(pal, o.outline!), false), o.outlineOpen));
   if (o.outline8) step(`outline8 ${o.outline8}`, () => img.outline(solid(pal, o.outline8!), true));
   if (o.crop) step("crop", () => img.crop());

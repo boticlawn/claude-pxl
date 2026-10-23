@@ -207,7 +207,50 @@ function edge(img: Img, x: number, y: number): boolean {
  * step lighter on the side facing the light. Colors outside any ramp get a dark version of
  * themselves. Grows the canvas by 1 on every side, like outline.
  */
-export function selout(img: Img, pal: Palette, light: LightSpec = "tl", open = ""): Img {
+export interface Ink {
+  /** Line color (warm near-black). */
+  color: Color;
+  /** How much outlines move toward it, 0 = pure sel-out, 1 = flat ink (default 0.65). */
+  mix: number;
+  /** Strength of inner lines between materials, 0 = none (default 0.7). */
+  inner: number;
+}
+
+/** Mix two colors in sRGB (cheap; for line colors). */
+function mixRgb(a: Color, b: Color, t: number): Color {
+  const [r1, g1, b1] = channels(a), [r2, g2, b2] = channels(b);
+  return pack(r1 + (r2 - r1) * t, g1 + (g2 - g1) * t, b1 + (b2 - b1) * t);
+}
+
+/**
+ * Inner contour lines: where two different materials meet inside one sprite (pillow on a
+ * blanket, frame around a picture, a hat on a head), the pixel on the darker side becomes a line
+ * in the dark end of its ramp, pulled toward the ink. Shading steps of one material never get a line.
+ */
+export function innerLines(img: Img, pal: Palette, ink: Ink): void {
+  if (ink.inner <= 0) return;
+  const { w, h } = img, out = img.data.slice();
+  const fam = (c: Color) => (c === TRANSPARENT ? undefined : pal.rampOf(c)?.ramp);
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x, a = img.data[i];
+      if (a === TRANSPARENT) continue;
+      const fa = fam(a);
+      if (!fa) continue;
+      for (const [dx, dy] of [[1, 0], [0, 1]] as const) {
+        if (x + dx >= w || y + dy >= h) continue;
+        const j = (y + dy) * w + x + dx, b = img.data[j], fb = fam(b);
+        if (!fb || fb === fa) continue;
+        // Line goes on the darker material's side; its color: dark tone of that material, inked.
+        const [ti, tc, tr] = lum(a) <= lum(b) ? [i, a, fa] : [j, b, fb];
+        const dark = tr[Math.max(0, Math.min(1, tr.length - 1))];
+        out[ti] = mixRgb(mixRgb(tc, dark, 0.75), ink.color, ink.mix * 0.6 * ink.inner);
+      }
+    }
+  img.data.set(out);
+}
+
+export function selout(img: Img, pal: Palette, light: LightSpec = "tl", open = "", ink?: Ink): Img {
   const src = img.pad(1), o = src.copy();
   const skip = (x: number, y: number) => (open.includes("b") && y === src.h - 1) || (open.includes("t") && y === 0)
     || (open.includes("l") && x === 0) || (open.includes("r") && x === src.w - 1);
@@ -235,10 +278,13 @@ export function selout(img: Img, pal: Palette, light: LightSpec = "tl", open = "
         if (best === undefined || lum(cand) < lum(best)) best = cand;
       }
       if (!cnt || best === undefined) continue;
-      if (litSide / cnt > 0.25) {
+      const lit = litSide / cnt > 0.25;
+      if (lit) {
         const r = pal.rampOf(best);
         if (r && r.ramp.length > 2) best = r.ramp[1];
       }
+      // Ink: pull every outline toward one line color (less on the lit side) for a drawn look.
+      if (ink) best = mixRgb(best, ink.color, lit ? ink.mix * 0.6 : ink.mix);
       o.set(x, y, best);
     }
   return o;

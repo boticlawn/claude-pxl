@@ -15,7 +15,12 @@ water and textures get twice the detail; **1px lengths stay 1px** (outlines, sea
 which is what makes the result look finer rather than just bigger. Single pixels (`px`, grid
 chars, `c.plot`/`c.surf` from your own functions) become k x k blocks, so hand-drawn pixel art keeps
 its shape. Use 2 for detailed scenes (e.g. a 480x270 layout rendered at 960x540); props built for
-detail 1 work unchanged. CLI: `pxl build art.px.js --detail 2` overrides it.
+detail 1 work unchanged.
+
+To draw *at* the finer resolution, use fractional coordinates (`hline(2, 5.5, 8, "w-1")` lands on
+the real row between two logical rows) and `dot(x, y, c)`, which always sets exactly one real
+pixel (eyes, glints, buttons, stitches, wood grain). Details like these are what make a detail-2
+prop look hand-drawn at high resolution instead of upscaled. CLI: `pxl build art.px.js --detail 2` overrides it.
 
 ## Materials
 

@@ -9,7 +9,7 @@ import type { Region } from "./util.ts";
 
 /** Per op, the kind of each positional argument: p position, l length, a point list, r region, o options, - untouched. */
 const ARGS: Record<string, string> = {
-  px: "pp-", rect: "ppll-", box: "ppll-", line: "pppp-l", hline: "ppl-", vline: "ppl-",
+  px: "pp-", dot: "pp-", rect: "ppll-", box: "ppll-", line: "pppp-l", hline: "ppl-", vline: "ppl-",
   ellipse: "ppll--", circ: "ppl-", ring: "ppl-", poly: "a-", fill: "pp-",
   dither: "ppll---", grad: "ppll---", noise: "ppll----", recolor: "-r-", shade: "r--", light: "r--",
   stamp: "-ppo", tile: "-pp--o", pattern: "-ppllo", tilemap: "-o", scatter: "-ppll-o",
@@ -24,7 +24,7 @@ const ARGS: Record<string, string> = {
 /** Option keys holding lengths (numbers or number pairs) or positions. */
 const LEN_KEYS = new Set([
   "r", "r1", "ry", "z", "w", "cap", "top", "side", "bevel", "bulge", "taper", "size", "len", "h", "lean",
-  "gap", "every", "start", "reflectLen", "shadow", "scallop", "x", "y", "scale", "cell", "skyReach", "sag",
+  "gap", "every", "start", "reflectLen", "shadow", "scallop", "x", "y", "scale", "cell", "skyReach", "sag", "dx", "dy",
 ]);
 
 const len = (v: number, k: number) => (Math.abs(v) <= 1 ? v : v * k);
@@ -40,6 +40,8 @@ function scaleOpts(name: string, o: Record<string, unknown>, k: number): Record<
   const out: Record<string, unknown> = {};
   for (const [key, v] of Object.entries(o)) {
     if (key === "where") out[key] = scaleRegion(v as Region, k);
+    else if (key === "cast" && v && typeof v === "object") out[key] = scaleOpts("cast", v as Record<string, unknown>, k);
+    else if (key === "cast" && v === true) out[key] = { dx: 2 * k, dy: k };
     else if (key === "center" && Array.isArray(v)) out[key] = v.map((n) => (n as number) * k);
     // stripes in fan mode: size is degrees, not pixels; text/caustics scale is a factor of k
     else if (key === "size" && name === "stripes" && o.center) out[key] = v;

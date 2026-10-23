@@ -48,6 +48,7 @@ export const SIGNATURES: Record<string, string> = {
   bump: "?shape:s opts:o",
   normals: "x:n y:n str:s",
   lighting: "?opts:o",
+  dot: "x:n y:n c:c",
   arch: "x:n y:n w:n h:n c:c ?ring:b",
   ball: "cx:n cy:n r:n c:c ?opts:o",
   oval: "x:n y:n w:n h:n c:c ?opts:o",
@@ -109,9 +110,9 @@ const OP_OPTS: Record<string, string[]> = {
 };
 
 const ASSET_OPTS: Record<AssetKind, string[]> = {
-  sprite: ["w", "h", "base", "mx", "my", "swap", "flip", "rot", "outline", "outline8", "outlineOpen", "crop", "layers", "form"],
-  scene: ["w", "h", "bg", "mx", "my", "swap", "flip", "rot", "outline", "outline8", "outlineOpen", "crop", "layers", "form"],
-  anim: ["w", "h", "base", "mx", "my", "swap", "flip", "rot", "outline", "outline8", "outlineOpen", "crop", "layers", "form", "fps", "frames", "loop"],
+  sprite: ["w", "h", "base", "mx", "my", "swap", "flip", "rot", "outline", "outline8", "outlineOpen", "crop", "layers", "form", "ink"],
+  scene: ["w", "h", "bg", "mx", "my", "swap", "flip", "rot", "outline", "outline8", "outlineOpen", "crop", "layers", "form", "ink"],
+  anim: ["w", "h", "base", "mx", "my", "swap", "flip", "rot", "outline", "outline8", "outlineOpen", "crop", "layers", "form", "ink", "fps", "frames", "loop"],
 };
 const FRAME_OPTS = ["ms", "hold"];
 /** Longest loop a combined timeline may have (ms); longer ones are cut. */
@@ -187,6 +188,8 @@ export class Project implements BuildCtx {
   pal: Palette = Palette.builtin("pico8");
   /** detail(k): every asset renders at k times its logical size. */
   detail = 1;
+  /** ink(): line color for outline "auto" + inner lines. */
+  ink?: import("./form.ts").Ink;
   /** Set by a loader to support include(). */
   includeHook?: (path: string) => void;
 
@@ -305,6 +308,18 @@ export class Project implements BuildCtx {
       this.includeHook(path);
     };
     env.rng = (seed?: number) => rng(seed);
+    env.ink = (color: unknown, opts: unknown = {}) => {
+      const loc = this.callerLoc();
+      try {
+        if (color === false) { this.ink = undefined; return; }
+        if (!isPlainObject(opts)) throw new PxError("ink: second argument must be { mix, inner }");
+        checkKeys("ink", opts, ["mix", "inner"]);
+        const c = this.pal.resolve(color);
+        if (c === null || c === 0) throw new PxError(`ink needs a visible color, got ${JSON.stringify(color)}`);
+        const o = opts as { mix?: number; inner?: number };
+        this.ink = { color: c, mix: o.mix ?? 0.65, inner: o.inner ?? 0.7 };
+      } catch (e) { throw wrap(e).within("ink", loc); }
+    };
     env.detail = (k: unknown) => {
       if (typeof k !== "number" || !Number.isInteger(k) || k < 1 || k > 4) throw new PxError("detail(k): k must be 1, 2, 3 or 4", this.callerLoc());
       this.detail = k;
