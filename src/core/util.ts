@@ -100,8 +100,11 @@ export function polyBounds(pts: number[]): { x0: number; y0: number; x1: number;
 }
 
 /** "abc" or ["a", "b", "c"] -> list of color specs. */
+/** "abc" -> a, b, c; material steps and families stay whole: "y+2gq-1z*" -> y+2, g, q-1, z*. */
 export function colorList(cols: string | string[]): string[] {
-  return Array.isArray(cols) ? [...cols] : [...cols];
+  if (Array.isArray(cols)) return [...cols];
+  if (cols.startsWith("#")) return [cols];
+  return cols.match(/.(?:[+-]\d+)*\*(?!\*)|.(?:[+-]\d+)+|./gsu) ?? [];
 }
 
 /** Glob with "*" -> RegExp. */

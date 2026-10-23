@@ -13,11 +13,8 @@ import { bayer, colorList, regionPred } from "./util.ts";
  * pixel's palette color when `img` has left the palette (lit by lighting()); defaults to img.
  */
 export function applyGlow(img: Img, keys: string | string[], o: GlowOpts, pal: Palette, keyed: Uint32Array = img.data): Img {
-  const src = new Set<Color>();
-  for (const k of colorList(keys)) {
-    const c = pal.resolve(k);
-    if (c !== null && c !== TRANSPARENT) src.add(c);
-  }
+  const src = pal.resolveSet(keys);
+  src.delete(TRANSPARENT);
   const r = o.r ?? 6;
   if (!(r > 0)) throw new PxError(`glow r must be > 0, got ${r}`);
   const inside = o.where === undefined ? undefined : regionPred(o.where)

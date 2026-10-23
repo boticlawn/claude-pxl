@@ -27,6 +27,10 @@ export interface LayerOpts {
   wall?: boolean;
   /** Pixels this layer leaves visible ignore lighting (skies, backdrops). */
   unlit?: boolean;
+  /** Aerial perspective: push the layer this far (0..1) toward hazeColor before compositing. */
+  haze?: number;
+  /** Haze color: key or "#hex" (default: a pale sky blue). */
+  hazeColor?: string;
 }
 
 export interface Layer {
@@ -49,8 +53,21 @@ export interface AssetOpts {
   swap?: Record<string, string>;
   flip?: "x" | "y" | "xy";
   rot?: 90 | 180 | 270;
+  /** Outline color, or "auto" for a selective outline (darkest tone of what it borders). */
   outline?: string;
   outline8?: string;
+  /** false: outline only the outer silhouette; holes (lattices, nets, rings) stay open. */
+  outlineHoles?: boolean;
+  /** Sides that get no outline ("b" = bottom: things standing in water or cut by a frame). */
+  outlineOpen?: string;
+  /** false: ignore the project's ink() for this asset; a number overrides its mix (0.3 = light lines for foliage). */
+  ink?: boolean | number;
+  /** Inner contour lines: false = none for this asset, a number = strength. */
+  inner?: boolean | number;
+  /** Keys / families that never get inner lines (painted decoration: "a*q*" for a picture's sky and sea). */
+  innerSkip?: string;
+  /** Form-shade the finished asset (after mirror/flip/rot, before outline). */
+  form?: boolean | import("./form.ts").FormOpts;
   crop?: boolean;
   /** Also export each layer as its own PNG. */
   layers?: boolean;
@@ -134,6 +151,20 @@ export interface PlaceOpts {
   delay?: number;
   /** Animated assets: random start time per placement (true), seeded like other picks. */
   rdelay?: boolean;
+  /** stamp: drop shadow onto what's behind (walls, floors): true or { dx, dy, steps, density }. */
+  cast?: boolean | CastOpts;
+  /** stamp: which point of the sprite (x, y) is: "tl" (default), "t", "tr", "l", "c", "r", "bl", "b", "br". */
+  anchor?: "tl" | "t" | "tr" | "l" | "c" | "r" | "bl" | "b" | "br";
+}
+
+export interface CastOpts {
+  /** Offset away from the light in px (default 2, 1: down-right for top-left light). */
+  dx?: number;
+  dy?: number;
+  /** Ramp steps darker (default 1). */
+  steps?: number;
+  /** 0..1 dithered coverage for soft shadows (default 1). */
+  density?: number;
 }
 
 export interface ScatterOpts extends PlaceOpts {
@@ -223,6 +254,76 @@ export interface GlowOpts {
   bands?: number;
   /** Ramp mode: step neighbours up to this many shades lighter along the ramps (stays in palette). */
   ramp?: number;
+}
+
+export interface BallOpts {
+  /** Vertical radius (oval); default r. */
+  ry?: number;
+  /** How strongly the sides curve away, 0..1+ (default 1; lower = flatter, like a cushion). */
+  depth?: number;
+}
+
+export interface CylOpts {
+  /** Height of the visible top ellipse in px (0 = pure side view). */
+  cap?: number;
+  /** Color of the top face (default: the body color). */
+  capColor?: string;
+  /** Px the middle swells (barrels, vases). */
+  bulge?: number;
+  /** Px each side narrows toward the bottom (pots, cups; negative widens). */
+  taper?: number;
+  /** "v" standing (default), "h" lying (logs, pipes): w/h stay the box size. */
+  dir?: "v" | "h";
+}
+
+export interface BlockOpts {
+  /** Height of the top face in px (0 = none). */
+  top?: number;
+  /** Width of the side face in px (0 = none). */
+  side?: number;
+  /** "r" (default) or "l". */
+  sideAt?: "r" | "l";
+  /** Px of rounded edge on the front face (default 1, 0 = sharp). */
+  bevel?: number;
+  topColor?: string;
+  sideColor?: string;
+}
+
+export interface DomeOpts {
+  /** Width of each scallop hanging under the rim in px (0 = straight rim). */
+  scallop?: number;
+  /** Shift the scallops sideways in px (line them up with stripes). */
+  phase?: number;
+  depth?: number;
+}
+
+export interface TextureOpts {
+  /** Board / brick / tile / stripe size in px. */
+  size?: number;
+  /** Board or brick length in px. */
+  len?: number;
+  /** Seam color (default: one step darker than the material). */
+  seam?: string;
+  /** "h" (default) / "v" boards; stripes: "v" (default) / "h" / "d" diagonal. */
+  dir?: "h" | "v" | "d";
+  /** Only paint onto these keys. */
+  on?: string;
+  /** stripes: radiate from this point instead (fan stripes); size = degrees per stripe. */
+  center?: [number, number];
+}
+
+export interface TubeOpts {
+  /** Radius at the end point (default: same as the start). */
+  r1?: number;
+}
+
+export interface ShadowOpts {
+  /** Ramp steps darker (default 1). */
+  steps?: number;
+  /** Fraction of the radius that dithers out (default 0.45). */
+  soft?: number;
+  /** Only darken these keys. */
+  on?: string;
 }
 
 export interface TextOpts {

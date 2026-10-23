@@ -8,6 +8,7 @@ import {
   type SheetDef, type SheetOpts, type Timeline, isLayer, isOp,
 } from "./model.ts";
 import { Palette } from "./palette.ts";
+import { materialRamp, type MaterialOpts } from "./form.ts";
 import { Trace } from "./trace.ts";
 import { globRe, rng } from "./util.ts";
 
@@ -39,7 +40,7 @@ export const SIGNATURES: Record<string, string> = {
   pattern: "name:s x:n y:n w:n h:n ?opts:o",
   tilemap: "map:s opts:o",
   scatter: "name:s x:n y:n w:n h:n count:n ?opts:o",
-  grid: "x:n y:n str:s",
+  grid: "x:n y:n str:s ?map:o",
   wire: "x0:n y0:n x1:n y1:n sag:n c:c ?opts:o",
   text: "x:n y:n str:t c:c ?opts:o",
   clip: "where:r ...items:I",
@@ -47,8 +48,37 @@ export const SIGNATURES: Record<string, string> = {
   bump: "?shape:s opts:o",
   normals: "x:n y:n str:s",
   lighting: "?opts:o",
+  dot: "x:n y:n c:c",
+  fine: "x:n y:n str:s ?map:o",
+  arch: "x:n y:n w:n h:n c:c ?ring:b",
+  ball: "cx:n cy:n r:n c:c ?opts:o",
+  oval: "x:n y:n w:n h:n c:c ?opts:o",
+  dome: "cx:n by:n rx:n ry:n c:c ?opts:o",
+  pool: "cx:n cy:n rx:n ry:n ?opts:o",
+  flat: "?where:r",
+  planks: "x:n y:n w:n h:n c:c ?opts:o",
+  bricks: "x:n y:n w:n h:n c:c ?opts:o",
+  tiles: "x:n y:n w:n h:n c:c ?opts:o",
+  stripes: "x:n y:n w:n h:n colors:S ?opts:o",
+  arrange: "x:n y:n w:n names:a ?opts:o",
+  cyl: "x:n y:n w:n h:n c:c ?opts:o",
+  block: "x:n y:n w:n h:n c:c ?opts:o",
+  tube: "x0:n y0:n x1:n y1:n r:n c:c ?opts:o",
+  form: "?opts:o",
+  shadow: "cx:n cy:n rx:n ry:n ?opts:o",
+  water: "x:n y:n w:n h:n c:c ?opts:o",
+  reflect: "x:n y:n w:n len:n ?opts:o",
+  foam: "around:S ?opts:o",
+  caustics: "x:n y:n w:n h:n ?opts:o",
+  palm: "x:n y:n ?opts:o",
+  foliage: "cx:n cy:n rx:n ry:n c:c ?opts:o",
+  cloud: "x:n y:n w:n h:n c:c ?opts:o",
+  mountain: "x:n baseY:n w:n h:n c:c ?opts:o",
   glow: "keys:S ?opts:o",
 };
+
+const FORM_OPTS = ["light", "contrast", "dither", "bounce", "rim", "spec", "on"];
+const MATERIAL_OPTS = ["steps", "at", "shift", "dark", "light", "cool", "warm"];
 
 /** Allowed option keys of ops whose last argument is an options object. */
 const OP_OPTS: Record<string, string[]> = {
@@ -56,17 +86,39 @@ const OP_OPTS: Record<string, string[]> = {
   bump: ["w", "depth", "on", "where"],
   lighting: ["cell", "ambient", "ambientColor", "sky", "skyColor", "skyReach", "block", "smooth", "emit", "shape", "relief", "skyDir"],
   glow: ["where", "r", "strength", "color", "bands", "ramp"],
+  ball: ["ry", "depth"],
+  oval: ["depth"],
+  dome: ["scallop", "phase", "depth"],
+  pool: ["steps", "soft", "on"],
+  planks: ["size", "len", "seam", "dir", "on"],
+  bricks: ["size", "len", "seam", "on"],
+  tiles: ["size", "seam", "on"],
+  stripes: ["size", "dir", "on", "center"],
+  arrange: ["gap"],
+  cyl: ["cap", "capColor", "bulge", "taper", "dir"],
+  block: ["top", "side", "sideAt", "bevel", "topColor", "sideColor"],
+  tube: ["r1"],
+  form: FORM_OPTS.concat(["where"]),
+  shadow: ["steps", "soft", "on"],
+  water: ["depth", "shadow", "ripples", "len", "glints", "reflect", "reflectLen", "foam", "seed"],
+  reflect: ["keys", "on", "steps", "seed"],
+  foam: ["on", "c", "keep", "seed"],
+  caustics: ["scale", "width", "steps", "on", "seed"],
+  palm: ["h", "lean", "trunk", "leaf", "fronds", "len", "nuts", "r", "seed"],
+  foliage: ["size", "count", "flowers", "bloom", "tips", "seed"],
+  cloud: ["puffs", "seed"],
+  mountain: ["rough", "peak", "gullies", "seed"],
 };
 
 const ASSET_OPTS: Record<AssetKind, string[]> = {
-  sprite: ["w", "h", "base", "mx", "my", "swap", "flip", "rot", "outline", "outline8", "crop", "layers"],
-  scene: ["w", "h", "bg", "mx", "my", "swap", "flip", "rot", "outline", "outline8", "crop", "layers"],
-  anim: ["w", "h", "base", "mx", "my", "swap", "flip", "rot", "outline", "outline8", "crop", "layers", "fps", "frames", "loop"],
+  sprite: ["w", "h", "base", "mx", "my", "swap", "flip", "rot", "outline", "outline8", "outlineOpen", "outlineHoles", "crop", "layers", "form", "ink", "inner", "innerSkip"],
+  scene: ["w", "h", "bg", "mx", "my", "swap", "flip", "rot", "outline", "outline8", "outlineOpen", "outlineHoles", "crop", "layers", "form", "ink", "inner", "innerSkip"],
+  anim: ["w", "h", "base", "mx", "my", "swap", "flip", "rot", "outline", "outline8", "outlineOpen", "outlineHoles", "crop", "layers", "form", "ink", "inner", "innerSkip", "fps", "frames", "loop"],
 };
 const FRAME_OPTS = ["ms", "hold"];
 /** Longest loop a combined timeline may have (ms); longer ones are cut. */
 const MAX_LOOP = 60000;
-const LAYER_OPTS = ["x", "y", "hidden", "shade", "light", "density", "solid", "wall", "unlit"];
+const LAYER_OPTS = ["x", "y", "hidden", "shade", "light", "density", "solid", "wall", "unlit", "haze", "hazeColor"];
 const SHEET_OPTS = ["cols", "pad"];
 
 function checkArgs(name: string, args: unknown[]): void {
@@ -135,6 +187,10 @@ export class Project implements BuildCtx {
   /** Art files loaded so far (absolute paths or virtual names), for locations and watching. */
   readonly files: string[] = [];
   pal: Palette = Palette.builtin("pico8");
+  /** detail(k): every asset renders at k times its logical size. */
+  detail = 1;
+  /** ink(): line color for outline "auto" + inner lines. */
+  ink?: import("./form.ts").Ink;
   /** Set by a loader to support include(). */
   includeHook?: (path: string) => void;
 
@@ -204,6 +260,19 @@ export class Project implements BuildCtx {
     env.ramps = (...ramps: string[]) => {
       try { this.pal = this.pal.withRamps(ramps); } catch (e) { throw wrap(e).within("ramps", this.callerLoc()); }
     };
+    env.material = (key: unknown, color: unknown, opts: unknown = {}) => {
+      const loc = this.callerLoc();
+      try {
+        if (typeof key !== "string" || [...key].length !== 1 || ".#_ ".includes(key)) throw new PxError('material needs a one-char key first: material("o", "#c8743a")');
+        if (!isPlainObject(opts)) throw new PxError("material: third argument must be an options object");
+        checkKeys("material", opts, MATERIAL_OPTS);
+        const base = typeof color === "string" && !color.startsWith("#") ? this.pal.resolve(color) : this.pal.resolve(color);
+        if (base === null || base === 0) throw new PxError(`material '${key}': needs a visible color, got ${JSON.stringify(color)}`);
+        const { ramp, at } = materialRamp(base, opts as MaterialOpts);
+        const entries = ramp.map((c, i): [string, number] => [i === at ? key : `${key}${i - at > 0 ? "+" : ""}${i - at}`, c]);
+        this.pal = this.pal.withMaterial(entries, key);
+      } catch (e) { throw wrap(e).within("material", loc); }
+    };
     env.sprite = (name: unknown, ...rest: unknown[]) => define("sprite", name, rest);
     env.anim = (name: unknown, ...rest: unknown[]) => define("anim", name, rest);
     env.frame = (...args: unknown[]): Op => {
@@ -240,6 +309,22 @@ export class Project implements BuildCtx {
       this.includeHook(path);
     };
     env.rng = (seed?: number) => rng(seed);
+    env.ink = (color: unknown, opts: unknown = {}) => {
+      const loc = this.callerLoc();
+      try {
+        if (color === false) { this.ink = undefined; return; }
+        if (!isPlainObject(opts)) throw new PxError("ink: second argument must be { mix, inner }");
+        checkKeys("ink", opts, ["mix", "inner"]);
+        const c = this.pal.resolve(color);
+        if (c === null || c === 0) throw new PxError(`ink needs a visible color, got ${JSON.stringify(color)}`);
+        const o = opts as { mix?: number; inner?: number };
+        this.ink = { color: c, mix: o.mix ?? 0.65, inner: o.inner ?? 0.7 };
+      } catch (e) { throw wrap(e).within("ink", loc); }
+    };
+    env.detail = (k: unknown) => {
+      if (typeof k !== "number" || !Number.isInteger(k) || k < 1 || k > 4) throw new PxError("detail(k): k must be 1, 2, 3 or 4", this.callerLoc());
+      this.detail = k;
+    };
 
     for (const name of [...OPS, "clip", "lighting", "glow"]) {
       env[name] = (...args: unknown[]): Op => {

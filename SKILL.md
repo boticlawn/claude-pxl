@@ -1,6 +1,6 @@
 ---
 name: pxl-pixel-art
-description: Create pixel art (game sprites, characters, items, tiles, tilesets, icons, scenes, sprite sheets) with pxl, a compact JavaScript DSL that renders PNGs and lets the user watch the painting live in a browser. Use when asked to draw, design or iterate on pixel art or game assets.
+description: Create pixel art (game sprites, characters, items, tiles, tilesets, icons, scenes, sprite sheets) with pxl, a compact JavaScript DSL that renders PNGs and lets the user watch the painting live in a browser. Computes depth for you: material ramps with hue shift, form shading from surface normals, selective outlines, water, foliage, clouds, haze. Use when asked to draw, design or iterate on pixel art or game assets.
 ---
 
 # pxl: pixel art as code
@@ -26,7 +26,30 @@ parts, primitives, brushes and tilemaps. Needs Node ≥ 22.18. No install step.
 Errors name the file:line:col, the asset/layer/op path, and suggest fixes ("did you mean 'r'?").
 One broken asset doesn't stop the others from building.
 
-## Template
+## Depth comes from the engine: form first
+
+Flat fills look like stickers. Don't fake volume with hand-placed `shade()` regions. Instead:
+
+1. Colors are **materials**: `material("o", "#d0703c")` makes a hue-shifted ramp; use `"o-2"`..`"o+2"` for steps.
+2. Objects are **surfaces**: `ball`, `cyl`, `block`, `tube` (and `bump` for anything else) paint the base tone plus normals.
+3. **`form()`** lights them all from one direction (`form: true` on sprites, `form()` op in scenes).
+4. **`outline: "auto"`** for colored selective outlines; **`shadow()`** under everything that stands.
+5. Scenes: `water`/`reflect`/`foam`, `palm`/`foliage`, `cloud`, `mountain`, layer `haze`.
+
+Full guide with every option: [form.md](form.md). Read it before any scene or prop.
+
+```js
+pal({ k: "#1b1630" })
+material("o", "#d0703c"); material("g", "#5aa05a"); material("f", "#5a5478")
+sprite("pot", { w: 18, h: 22, form: true, outline: "auto" },
+  cyl(1, 8, 16, 14, "o", { cap: 2, taper: 2, capColor: "o+1" }),
+  hline(1, 11, 16, "o-1"),                       // painted band, shaded with the pot
+  foliage(9, 5, 8, 5, "g", { size: [2, 3] }))
+scene("room", { w: 80, h: 40, bg: "f-1" },
+  rect(0, 30, 80, 10, "f"), shadow(20, 31, 9, 2), stamp("pot", 11, 9))
+```
+
+## Template (classic DSL)
 
 ```js
 pal({ k: "#1b1630", g: "#8ccf63", G: "#4c8a44", t: "#2a5560", w: "#fff6e0", r: "#e2585e", R: "#a63a4c" })
@@ -78,7 +101,8 @@ sheet("chars", ["slime*", "chest"], { pad: 1 })
   of those keys a halo (flames, potions, moons, neon); `ramp: 2` instead stays in the palette.
   Give glowing things their own keys so nothing else lights up, or limit it with `where`.
 
-Full API with every option: [reference.md](reference.md).
+Full API with every option: [reference.md](reference.md). Form, materials, water, foliage, haze:
+[form.md](form.md).
 Dynamic lighting (lamps, light blocked by solid layers, sky light, Terraria-style): read
 [lighting.md](lighting.md) only when a scene needs lights.
 
@@ -101,5 +125,6 @@ Dynamic lighting (lamps, light blocked by solid layers, sky light, Terraria-styl
   at an angle (3/4 views), make the marks follow the face's slant.
 - Lighting: define `ramps`, then `light`/`shade` regions; stack a `density: 0.5` pass for soft edges.
   Use `shade: true` layers with a `poly` for cast shadows across many objects.
-- Use mnemonic keys (`g`/`G` light/dark green). Keep 2–4 shades per material for a clean pixel-art look.
+- Use mnemonic keys. Prefer `material()` (5–7 tones each) over hand-picked 2–3 color ramps; a rich
+  scene uses 8–12 materials. Small icons can stay at 3–4 tones (`steps: 4`).
 - Build with `--only` while iterating; a full build also writes every preview.

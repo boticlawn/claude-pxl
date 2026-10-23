@@ -1,5 +1,7 @@
 import { type Color, parseHex, TRANSPARENT, toHex } from "./color.ts";
 import { PxError, didYouMean } from "./errors.ts";
+import { colorList } from "./util.ts";
+import { followInk } from "./inked.ts";
 
 export const INDEX_KEYS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const RESERVED = new Set([".", "_", " ", "#"]);
@@ -30,9 +32,10 @@ export class Palette {
   readonly list: readonly Color[];
   readonly order: readonly string[];
   readonly aliases: ReadonlySet<string>;
-  readonly ramps: readonly string[];
+  /** Ramps as key lists, dark -> light. Keys are single chars, or generated material keys ("o-2"). */
+  readonly ramps: readonly (readonly string[])[];
 
-  constructor(keys: Map<string, Color>, list: Color[], order: string[], aliases: Set<string>, ramps: string[]) {
+  constructor(keys: Map<string, Color>, list: Color[], order: string[], aliases: Set<string>, ramps: (readonly string[])[]) {
     this.keys = keys;
     this.list = list;
     this.order = order;
@@ -83,11 +86,42 @@ export class Palette {
     return new Palette(keys, [...this.list], order, al, [...this.ramps]);
   }
 
-  withRamps(ramps: string[]): Palette {
-    for (const r of ramps)
-      for (const k of r) if (!this.keys.has(k)) throw new PxError(`ramp "${r}" uses unknown key '${k}'${didYouMean(k, this.order)}`);
-    return new Palette(new Map(this.keys), [...this.list], [...this.order], new Set(this.aliases), [...this.ramps, ...ramps]);
+  withRamps(ramps: (string | readonly string[])[]): Palette {
+    const lists = ramps.map((r) => (typeof r === "string" ? [...r] : [...r]));
+    for (const r of lists)
+      for (const k of r) if (!this.keys.has(k)) throw new PxError(`ramp "${r.join("")}" uses unknown key '${k}'${didYouMean(k, this.order)}`);
+    return new Palette(new Map(this.keys), [...this.list], [...this.order], new Set(this.aliases), [...this.ramps, ...lists]);
   }
+
+  /**
+   * Add generated keys (material ramps): `named` keys are user-facing, the rest are derived
+   * ("o-2", "o+1") and usable in ops but not in grid strings. The list becomes a ramp, dark -> light.
+   */
+  withMaterial(entries: [string, Color][], named: string): Palette {
+    const keys = new Map(this.keys), order = [...this.order], al = new Set(this.aliases);
+    for (const [k, c] of entries) {
+      if (!keys.has(k)) order.push(k);
+      keys.set(k, c);
+      if (k === named) al.add(k);
+    }
+    // A redefined material replaces its old ramp.
+    const ramps = this.ramps.filter((r) => !r.includes(named));
+    return new Palette(keys, [...this.list], order, al, [...ramps, entries.map(([k]) => k)]);
+  }
+
+  /** Ramp containing color c and its index there (first ramp wins), or undefined. */
+  rampOf(c: Color): { ramp: readonly Color[]; i: number } | undefined {
+    this.rampIndex ??= (() => {
+      const m = new Map<Color, { ramp: readonly Color[]; i: number }>();
+      for (const r of this.ramps) {
+        const cols = r.map((k) => this.keys.get(k)!);
+        cols.forEach((col, i) => { if (!m.has(col)) m.set(col, { ramp: cols, i }); });
+      }
+      return m;
+    })();
+    return this.rampIndex.get(c);
+  }
+  private rampIndex?: Map<Color, { ramp: readonly Color[]; i: number }>;
 
   /** Key char, "#hex", "." (skip -> null) or "_" (erase -> transparent). */
   resolve(spec: unknown): Resolved {
@@ -100,13 +134,67 @@ export class Palette {
       if (c === undefined) throw new PxError(`bad color '${spec}'`);
       return c;
     }
-    const c = this.keys.get(spec);
+    const c = this.keys.get(spec) ?? this.stepped(spec);
     if (c === undefined) {
       const hint = this.keys.has(spec.toLowerCase()) ? ` (did you mean '${spec.toLowerCase()}'?)`
         : this.keys.has(spec.toUpperCase()) ? ` (did you mean '${spec.toUpperCase()}'?)` : "";
-      throw new PxError(`unknown color key '${spec}'${hint} (have: ${this.order.join("")})`);
+      const named = this.order.filter((k) => [...k].length === 1);
+      const steps = this.order.length > named.length ? '; material steps like "o-1" / "o+2" also work' : "";
+      throw new PxError(`unknown color key '${spec}'${hint} (have: ${named.join("")}${steps})`);
     }
     return c;
+  }
+
+  /** Colors of a key list: keys, steps ("o-1"), hex, and families ("z*" = every tone of z's ramp). */
+  resolveSet(keys: string | string[]): Set<Color> {
+    const out = new Set<Color>();
+    for (const k of colorList(keys)) {
+      if (k.length > 1 && k.endsWith("*") && !k.startsWith("#")) {
+        const base = this.resolve(k.slice(0, -1));
+        const r = base === null ? undefined : this.rampOf(base);
+        if (!r) throw new PxError(`'${k}': key '${k.slice(0, -1)}' is in no ramp, so it has no family`);
+        r.ramp.forEach((c) => out.add(c));
+        continue;
+      }
+      const c = this.resolve(k);
+      if (c !== null) out.add(c);
+    }
+    return out;
+  }
+
+  /** "o-2" / "o+1": a key stepped along its ramp (clamped at the ends). */
+  private stepped(spec: string): Color | undefined {
+    // Chains add up: "p+1-1" = "p", handy when helpers build steps from a step.
+    const m = /^(.+?)((?:[+-]\d+)+)$/u.exec(spec);
+    if (!m) return undefined;
+    const base = this.keys.get(m[1]);
+    if (base === undefined) return undefined;
+    const r = this.rampOf(base);
+    if (!r) throw new PxError(`'${spec}': key '${m[1]}' is in no ramp (use material() or ramps())`);
+    const off = (m[2].match(/[+-]\d+/g) ?? []).reduce((a, v) => a + Number(v), 0);
+    return r.ramp[Math.max(0, Math.min(r.ramp.length - 1, r.i + off))];
+  }
+
+  /**
+   * Color map for swap / recolor. When both sides are on ramps (materials), the whole ramp is
+   * swapped step by step, aligned at the two keys: { h: "H" } recolors h-2..h+1 to H-2..H+1, so
+   * variants work after form shading.
+   */
+  swapMap(swap: Record<string, string>): Map<Color, Color> {
+    const m = new Map<Color, Color>();
+    for (const from of Object.keys(swap)) {
+      const a = this.resolve(from), b = this.resolve(swap[from]);
+      if (a === null || b === null) continue;
+      const ra = this.rampOf(a), rb = this.rampOf(b);
+      if (ra && rb && ra.ramp !== rb.ramp) {
+        ra.ramp.forEach((c, i) => {
+          if (!m.has(c)) m.set(c, rb.ramp[Math.max(0, Math.min(rb.ramp.length - 1, rb.i + i - ra.i))]);
+        });
+      }
+      m.set(a, b);
+    }
+    followInk(m);
+    return m;
   }
 
   /** Map color -> darker (dir -1) or lighter (dir +1) neighbour along the ramps. */
@@ -114,7 +202,7 @@ export class Palette {
     if (!this.ramps.length) throw new PxError('no ramps defined: add ramps("kDdu", ...) (dark -> light) after pal()');
     const m = new Map<Color, Color>();
     for (const r of this.ramps) {
-      const ks = [...r];
+      const ks = r;
       for (let i = 0; i < ks.length; i++) {
         const to = ks[i + dir];
         if (to === undefined) continue;

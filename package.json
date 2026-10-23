@@ -20,7 +20,8 @@
     "examples/*.px.js",
     "SKILL.md",
     "reference.md",
-    "lighting.md"
+    "lighting.md",
+    "form.md"
   ],
   "engines": {
     "node": ">=22.18"

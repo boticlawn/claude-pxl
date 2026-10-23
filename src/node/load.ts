@@ -27,7 +27,9 @@ export function loadProject(file: string, opts: ProjectOptions = {}): Project {
     p.addFile(abs);
     stack.push(abs);
     try {
-      vm.runInContext(compile(code, abs), ctx, { filename: abs });
+      // Each file runs in its own block scope, so top-level const/let/class in included files
+      // don't collide with each other (assets, materials and globals are still shared).
+      vm.runInContext("{" + compile(code, abs) + "\n}", ctx, { filename: abs, columnOffset: -1 });
     } catch (e) {
       throw syntaxAware(e, abs, p);
     } finally {

@@ -43,7 +43,8 @@ export function ascii(img: Img, pal: Palette): string {
     let row = String(y).padStart(3) + " ";
     for (let x = 0; x < img.w; x++) {
       const c = img.data[y * img.w + x];
-      row += c === TRANSPARENT ? "." : rev.get(c) ?? "?";
+      // One char per pixel: material steps ("o-2") print as their base key.
+      row += c === TRANSPARENT ? "." : (rev.get(c) ?? "?")[0];
     }
     lines.push(row);
   }

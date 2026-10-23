@@ -119,6 +119,12 @@ different houses from one definition).
 Randomness is seeded from the placement position + `seed`, so builds are reproducible and moving
 one placement doesn't reshuffle the others. Change `seed` to reroll.
 
+## Form, materials, environment
+
+`material`, `ball oval dome cyl block tube arch`, `form`, `shadow pool flat`, `planks bricks tiles stripes`, `arrange`, `grid(x, y, str, map)`, sprite options `form` and
+`outline: "auto"`, `water reflect foam caustics palm foliage cloud mountain`, and the layer
+options `haze` / `hazeColor`: see [form.md](form.md).
+
 ## Lighting
 
 `lamp(x, y, { r, color, power })`, `lighting({ cell, sky, ambient, emit, ... })`, and the layer flags
