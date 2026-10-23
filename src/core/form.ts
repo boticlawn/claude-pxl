@@ -207,7 +207,7 @@ function edge(img: Img, x: number, y: number): boolean {
  * step lighter on the side facing the light. Colors outside any ramp get a dark version of
  * themselves. Grows the canvas by 1 on every side, like outline.
  */
-export function selout(img: Img, pal: Palette, light: LightSpec = "tl", darkKey?: Color): Img {
+export function selout(img: Img, pal: Palette, light: LightSpec = "tl"): Img {
   const src = img.pad(1), o = src.copy();
   const L = lightDir(light);
   const op = (x: number, y: number) => src.get(x, y) !== TRANSPARENT;
@@ -215,13 +215,20 @@ export function selout(img: Img, pal: Palette, light: LightSpec = "tl", darkKey?
   for (let y = 0; y < src.h; y++)
     for (let x = 0; x < src.w; x++) {
       if (op(x, y)) continue;
+      // Narrow gaps inside an object (between bunk levels, chair and table) stay open.
+      if ((op(x - 1, y) && (op(x + 1, y) || op(x + 2, y))) || (op(x, y - 1) && (op(x, y + 1) || op(x, y + 2)))) continue;
       let best: Color | undefined, litSide = 0, cnt = 0;
       for (const [dx, dy] of dirs) {
-        if (!op(x + dx, y + dy)) continue;
+        const nx = x + dx, ny = y + dy;
+        if (!op(nx, ny)) continue;
+        // 1px-thin features (cords, rods, rails, ladder sides) get no outline beside them:
+        // outlining them turns a line into a 3px bar.
+        if (dx !== 0 && !op(nx + dx, ny) && !op(nx - dx, ny)) continue;
+        if (dy !== 0 && !op(nx, ny + dy) && !op(nx, ny - dy)) continue;
         cnt++;
         // The object is at (dx, dy) from here: this outline pixel faces the light when -d·L > 0.
         litSide += -(dx * L[0] + dy * L[1]);
-        const c = src.get(x + dx, y + dy), r = pal.rampOf(c);
+        const c = src.get(nx, ny), r = pal.rampOf(c);
         const cand = r ? r.ramp[0] : darken(c, 0.72);
         if (best === undefined || lum(cand) < lum(best)) best = cand;
       }
@@ -229,7 +236,7 @@ export function selout(img: Img, pal: Palette, light: LightSpec = "tl", darkKey?
       if (litSide / cnt > 0.25) {
         const r = pal.rampOf(best);
         if (r && r.ramp.length > 2) best = r.ramp[1];
-      } else if (darkKey !== undefined && lum(darkKey) < lum(best)) best = darkKey;
+      }
       o.set(x, y, best);
     }
   return o;

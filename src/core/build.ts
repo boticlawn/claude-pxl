@@ -308,7 +308,7 @@ function finish(img: Img, def: AssetDef, pal: Palette, trace?: Trace): Img {
     step("form", () => { applyForm(img, pal, fo); });
   }
   const light = o.form && o.form !== true ? o.form.light : undefined;
-  if (o.outline === "auto") step("outline auto", () => selout(img, pal, light, pal.keys.get("k")));
+  if (o.outline === "auto") step("outline auto", () => selout(img, pal, light));
   else if (o.outline) step(`outline ${o.outline}`, () => img.outline(solid(pal, o.outline!), false));
   if (o.outline8) step(`outline8 ${o.outline8}`, () => img.outline(solid(pal, o.outline8!), true));
   if (o.crop) step("crop", () => img.crop());
