@@ -136,7 +136,9 @@ export class Palette {
     if (c === undefined) {
       const hint = this.keys.has(spec.toLowerCase()) ? ` (did you mean '${spec.toLowerCase()}'?)`
         : this.keys.has(spec.toUpperCase()) ? ` (did you mean '${spec.toUpperCase()}'?)` : "";
-      throw new PxError(`unknown color key '${spec}'${hint} (have: ${this.order.join("")})`);
+      const named = this.order.filter((k) => [...k].length === 1);
+      const steps = this.order.length > named.length ? '; material steps like "o-1" / "o+2" also work' : "";
+      throw new PxError(`unknown color key '${spec}'${hint} (have: ${named.join("")}${steps})`);
     }
     return c;
   }

@@ -85,7 +85,7 @@ const OP_OPTS: Record<string, string[]> = {
   reflect: ["keys", "on", "steps", "seed"],
   foam: ["on", "c", "keep", "seed"],
   caustics: ["scale", "width", "steps", "on", "seed"],
-  palm: ["h", "lean", "trunk", "leaf", "fronds", "len", "nuts", "seed"],
+  palm: ["h", "lean", "trunk", "leaf", "fronds", "len", "nuts", "r", "seed"],
   foliage: ["size", "count", "flowers", "bloom", "tips", "seed"],
   cloud: ["puffs", "seed"],
   mountain: ["rough", "peak", "gullies", "seed"],

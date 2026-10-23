@@ -224,6 +224,8 @@ export interface PalmOpts {
   len?: number;
   /** Coconut key, or "" for none (default: none). */
   nuts?: string;
+  /** Trunk radius at the base in px (default: scales with h, 2.6 at h 40). */
+  r?: number;
   seed?: number;
 }
 
@@ -239,12 +241,14 @@ export function palm(cv: Canvas, x: number, y: number, o: PalmOpts = {}): void {
     (1 - t) ** 2 * y + 2 * (1 - t) * t * by + t * t * cy,
   ];
   const segs = Math.max(4, Math.round(H / 3));
+  const r0 = o.r ?? Math.max(1.6, 1.2 + H * 0.035), r1 = r0 * 0.55;
   for (let s = 0; s < segs; s++) {
     const [ax, ay] = pt(s / segs), [qx, qy] = pt((s + 1) / segs);
-    cv.tube(ax, ay, qx, qy, 2.6 - (1.2 * s) / segs, s % 2 ? trunk : `${trunk}-1`, { r1: 2.6 - (1.2 * (s + 1)) / segs });
+    const ra = r0 + (r1 - r0) * (s / segs), rb = r0 + (r1 - r0) * ((s + 1) / segs);
+    cv.tube(ax, ay, qx, qy, ra, s % 2 ? trunk : `${trunk}-1`, { r1: rb });
   }
   // Fronds: back ones first (they end up darker under the front ones once form() runs).
-  const n = o.fronds ?? 9, L = o.len ?? H * 0.55;
+  const n = o.fronds ?? 9, L = o.len ?? H * 0.55, crownR = Math.max(1, r1 * 1.2);
   const order = Array.from({ length: n }, (_, i) => i).sort((a, b) => Math.sin((a / n) * Math.PI * 2) - Math.sin((b / n) * Math.PI * 2));
   for (const i of order) {
     const ang = (i / n) * Math.PI * 2 + rnd() * 0.4;
