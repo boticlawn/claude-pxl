@@ -185,6 +185,8 @@ export class Project implements BuildCtx {
   /** Art files loaded so far (absolute paths or virtual names), for locations and watching. */
   readonly files: string[] = [];
   pal: Palette = Palette.builtin("pico8");
+  /** detail(k): every asset renders at k times its logical size. */
+  detail = 1;
   /** Set by a loader to support include(). */
   includeHook?: (path: string) => void;
 
@@ -303,6 +305,10 @@ export class Project implements BuildCtx {
       this.includeHook(path);
     };
     env.rng = (seed?: number) => rng(seed);
+    env.detail = (k: unknown) => {
+      if (typeof k !== "number" || !Number.isInteger(k) || k < 1 || k > 4) throw new PxError("detail(k): k must be 1, 2, 3 or 4", this.callerLoc());
+      this.detail = k;
+    };
 
     for (const name of [...OPS, "clip", "lighting", "glow"]) {
       env[name] = (...args: unknown[]): Op => {

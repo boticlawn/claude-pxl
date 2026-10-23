@@ -142,3 +142,15 @@ test("chained steps add up", () => {
   assert.equal(p.image("x").get(0, 0), p.image("x").get(1, 0));
   assert.deepEqual(colorList("o+1-1g"), ["o+1-1", "g"]);
 });
+
+test("detail(2): logical coordinates, double resolution, 1px seams stay 1px", () => {
+  const src = (d: number) => `detail(${d}); material("o", "#d0703c")
+sprite("b", { w: 10, h: 10, form: true }, ball(5, 5, 4, "o"), hline(0, 5, 10, "o-2"))
+scene("s", { w: 20, h: 12 }, stamp("b", 5, 1), px(0, 0, "o"))`;
+  const one = loadSource(src(1), "t.px.js"), two = loadSource(src(2), "t.px.js");
+  assert.equal(two.image("s").w, 40); assert.equal(two.image("b").w, 20);
+  const b = two.image("b"), seam = b.get(10, 10);
+  assert.notEqual(b.get(10, 11), seam, "1px line stays 1px thick");
+  assert.equal(two.image("s").get(1, 1), two.image("s").get(0, 0), "px becomes a 2x2 block");
+  assert.notEqual(one.image("s").get(1, 1), one.image("s").get(0, 0));
+});

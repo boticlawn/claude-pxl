@@ -159,8 +159,8 @@ export function foam(cv: Canvas, around: string, o: FoamOpts = {}): void {
   const onWater = o.on ? (x: number, y: number) => cv.is(x, y, o.on!) : (x: number, y: number) => cv.get(x, y) !== TRANSPARENT && !isObj(x, y);
   const fixed = o.c ? cv.color(o.c) : null, keep = o.keep ?? 0.8, rnd = cv.rng(o.seed ?? 5);
   const hits: [number, number, Color][] = [];
-  for (let y = -cv.oy; y < cv.h - cv.oy; y++)
-    for (let x = -cv.ox; x < cv.w - cv.ox; x++) {
+  for (let y = -cv.oy; y < cv.img.h - cv.oy; y++)
+    for (let x = -cv.ox; x < cv.img.w - cv.ox; x++) {
       if (!onWater(x, y)) continue;
       // Foam sits where the object meets the surface: under its bottom edge and beside its lowest
       // couple of rows, not along posts or walls that rise out of the water.

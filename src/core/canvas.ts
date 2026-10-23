@@ -7,6 +7,7 @@ import type { BallOpts, BlockOpts, BumpOpts, CylOpts, DomeOpts, LampOpts, Shadow
 import { bump, dirOf, setNormal } from "./normals.ts";
 import { applyForm, type FormOpts } from "./form.ts";
 import * as N from "./nature.ts";
+import { scaleArgs } from "./detail.ts";
 import { bayer, colorList, gridRows, hash, inPoly, polyBounds, type Region, regionPred, rng } from "./util.ts";
 
 /** How a canvas reaches other assets. */
@@ -52,6 +53,10 @@ export class Canvas {
   private clipPred?: Pred;
   /** Nesting depth of op calls (internal). */
   _depth = 0;
+  /** detail(k): ops called from art files are scaled by k (see detail.ts). */
+  k = 1;
+  /** Scale factor for user-level coordinates: k outside ops (art-file code), 1 inside them. */
+  private get u(): number { return this._depth === 0 ? this.k : 1; }
   private rev?: Map<Color, string>;
 
   constructor(img: Img, pal: Palette, res: Resolver, ox = 0, oy = 0, seed = 0) {
@@ -66,8 +71,9 @@ export class Canvas {
   /** Inside an anim: frame / frames, 0 (first frame) up to just below 1. */
   get phase(): number { return this.frame / this.frames; }
 
-  get w(): number { return this.img.w; }
-  get h(): number { return this.img.h; }
+  /** Size in the units the caller works in: logical pixels from art files under detail(k). */
+  get w(): number { return Math.ceil(this.img.w / this.u); }
+  get h(): number { return Math.ceil(this.img.h / this.u); }
 
   color(c: unknown): Resolved {
     return this.pal.resolve(c);
@@ -76,6 +82,14 @@ export class Canvas {
   /** Write an already-resolved color (null = skip); true if it landed. */
   plot(x: number, y: number, c: Resolved): boolean {
     if (c === null) return false;
+    if (this.u !== 1) {   // art-file code under detail(k): one logical pixel = a k x k block
+      const k = this.k;
+      let any = false;
+      this._depth++;
+      try { for (let j = 0; j < k; j++) for (let i = 0; i < k; i++) any = this.plot(Math.floor(x) * k + i, Math.floor(y) * k + j, c) || any; }
+      finally { this._depth--; }
+      return any;
+    }
     x = Math.floor(x);
     y = Math.floor(y);
     if (this.clipPred && !this.clipPred(x, y)) return false;
@@ -85,7 +99,8 @@ export class Canvas {
   }
 
   get(x: number, y: number): Color {
-    return this.img.get(this.ox + Math.floor(x), this.oy + Math.floor(y));
+    const u = this.u;
+    return this.img.get(this.ox + Math.floor(x * u), this.oy + Math.floor(y * u));
   }
 
   /** Palette key at (x, y): "." when transparent, "?" when not in the palette. */
@@ -130,6 +145,7 @@ export class Canvas {
 
   /** Run `fn` with drawing restricted to `region` (nests by intersection). */
   clip(region: Region, fn: () => void): void {
+    if (this.u !== 1) region = scaleArgs("clip", [region], this.k)[0] as Region;
     const prev = this.clipPred, p = regionPred(region);
     this.clipPred = prev ? (x, y) => prev(x, y) && p(x, y) : p;
     try { fn(); } finally { this.clipPred = prev; }
@@ -138,8 +154,12 @@ export class Canvas {
   // ---------------------------------------------------------------- shapes
 
   px(x: number, y: number, c: string): void {
-    this.plot(x, y, this.color(c));
+    const b = this.blk(), col = this.color(c);
+    for (let j = 0; j < b; j++) for (let i = 0; i < b; i++) this.plot(Math.floor(x) * b + i, Math.floor(y) * b + j, col);
   }
+
+  /** Block size for pixel-exact ops (px, grid, normals): k when called from an art file, else 1. */
+  private blk(): number { return this._depth === 1 ? this.k : 1; }
 
   rect(x: number, y: number, w: number, h: number, c: string): void {
     const col = this.color(c);
@@ -338,6 +358,12 @@ export class Canvas {
 
   /** Draw an image at canvas coords; with a predicate, only onto pixels it accepts. Lamps come along. */
   put(src: Img, x: number, y: number, ok?: Pred): void {
+    if (this.u !== 1) {   // art-file code under detail(k): logical position
+      this._depth++;
+      try { this.put(src, x * this.k, y * this.k, ok ? (px, py) => ok(Math.floor(px / this.k), Math.floor(py / this.k)) : undefined); }
+      finally { this._depth--; }
+      return;
+    }
     if (src.lamps?.length) {
       const dx = this.ox + Math.floor(x), dy = this.oy + Math.floor(y);
       (this.img.lamps ??= []).push(...src.lamps.map((l) => ({ ...l, x: l.x + dx, y: l.y + dy })));
@@ -428,6 +454,7 @@ export class Canvas {
    * so a face painted on a ball is shaded with it.
    */
   grid(x: number, y: number, s: string, map?: Record<string, string>): void {
+    const b = this.blk();
     gridRows(String(s)).forEach((row, r) => {
       [...row].forEach((ch, i) => {
         if (ch === "." || ch === " ") return;
@@ -435,7 +462,7 @@ export class Canvas {
         try { c = this.color(map?.[ch] ?? ch); } catch (e) {
           throw new PxError(`${(e as Error).message} at grid row ${r}, col ${i}`);
         }
-        this.plot(x + i, y + r, c);
+        for (let j = 0; j < b; j++) for (let q = 0; q < b; q++) this.plot((Math.floor(x) + i) * b + q, (Math.floor(y) + r) * b + j, c);
       });
     });
   }
@@ -484,17 +511,21 @@ export class Canvas {
 
   /** Paint normals with a numpad grid: 8 faces up, 3 down-right, 5 the viewer; qweasdzxc are softer. */
   normals(x: number, y: number, s: string): void {
+    const b = this.blk();
     gridRows(String(s)).forEach((row, r) => {
       [...row].forEach((ch, i) => {
         let d;
         try { d = dirOf(ch); } catch (e) { throw new PxError(`${(e as Error).message} at row ${r}, col ${i}`); }
-        const px = Math.floor(x) + i, py = Math.floor(y) + r;
-        if (d === null || (this.clipPred && !this.clipPred(px, py)) || !this.img.inside(this.ox + px, this.oy + py)) return;
-        const k = (this.oy + py) * this.img.w + this.ox + px;
-        if (d === "none") { if (this.img.norm) this.img.norm[k * 3 + 2] = 0; }
-        else setNormal(this.img.normals(), k, d[0], d[1], d[2]);
+        for (let bj = 0; bj < b; bj++) for (let bi = 0; bi < b; bi++) this.normalAt((Math.floor(x) + i) * b + bi, (Math.floor(y) + r) * b + bj, d);
       });
     });
+  }
+
+  private normalAt(px: number, py: number, d: ReturnType<typeof dirOf>): void {
+    if (d === null || (this.clipPred && !this.clipPred(px, py)) || !this.img.inside(this.ox + px, this.oy + py)) return;
+    const k = (this.oy + py) * this.img.w + this.ox + px;
+    if (d === "none") { if (this.img.norm) this.img.norm[k * 3 + 2] = 0; }
+    else setNormal(this.img.normals(), k, d[0], d[1], d[2]);
   }
 
   // ---------------------------------------------------------------- form primitives
@@ -502,6 +533,13 @@ export class Canvas {
   /** Plot c and give it surface normal (nx, ny, nz) (ny down, nz toward the viewer). */
   surf(x: number, y: number, c: Resolved | string, nx: number, ny: number, nz: number): void {
     if (typeof c === "string") c = this.color(c);
+    if (this.u !== 1) {   // called from art-file code under detail(k): paint a k x k block
+      const k = this.u;
+      this._depth++;
+      try { for (let j = 0; j < k; j++) for (let i = 0; i < k; i++) this.surf(Math.floor(x) * k + i, Math.floor(y) * k + j, c, nx, ny, nz); }
+      finally { this._depth--; }
+      return;
+    }
     if (!this.plot(x, y, c)) return;
     setNormal(this.img.normals(), (this.oy + Math.floor(y)) * this.img.w + this.ox + Math.floor(x), nx, ny, Math.max(0.05, nz));
   }
@@ -824,7 +862,9 @@ export type OpName = (typeof OPS)[number];
 for (const name of OPS) {
   const proto = Canvas.prototype as unknown as Record<string, (...a: unknown[]) => unknown>;
   const fn = proto[name];
+  const pixelExact = name === "px" || name === "grid" || name === "normals";
   proto[name] = function (this: Canvas, ...args: unknown[]) {
+    if (this._depth === 0 && this.k !== 1 && !pixelExact) args = scaleArgs(name, args, this.k);
     this._depth++;
     let ok = false;
     try {

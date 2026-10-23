@@ -7,6 +7,7 @@ import { Img } from "./image.ts";
 import { applyGlow } from "./glow.ts";
 import { applyForm, selout } from "./form.ts";
 import { hazeImg } from "./nature.ts";
+import { scaleArgs } from "./detail.ts";
 import { applyLighting } from "./light.ts";
 import { normalImage } from "./normals.ts";
 import { type AssetDef, type FrameOpts, type GlowOpts, type Item, type Layer, type LayerOpts, type LightingOpts, type Op, type Timeline, isLayer, isOp } from "./model.ts";
@@ -15,6 +16,8 @@ import { Trace } from "./trace.ts";
 import { bayer, fmtArgs, gridRows, gridSize, type Region } from "./util.ts";
 
 export interface BuildCtx extends Resolver {
+  /** detail(k): render scale (1 = logical pixels). */
+  detail?: number;
   /** Art-file location from an error stack, if any frame points into an art file. */
   locFromStack(stack: string): string | undefined;
   /** Art-file location of the current call site. */
@@ -84,12 +87,13 @@ function isFrameOpts(v: unknown): boolean {
 
 export function buildAsset(ctx: BuildCtx, def: AssetDef, seed: number, trace?: Trace, t = 0): BuildOut {
   const { opts, pal } = def;
+  const k = Math.max(1, Math.round(ctx.detail ?? 1));
   const tl = def.kind === "anim" ? animTimeline(def) : undefined;
   const frame = tl ? frameAt(tl, t) : 0, frames = tl ? tl.durations!.length : 1;
   let base: Img;
   if (def.kind === "scene") {
     if (!opts.w || !opts.h) throw new PxError("scene needs { w, h }");
-    base = new Img(opts.w, opts.h);
+    base = new Img(opts.w * k, opts.h * k);
     if (opts.bg) {
       const bg = pal.resolve(opts.bg);
       if (bg !== null) base.fill(bg);
@@ -97,19 +101,21 @@ export function buildAsset(ctx: BuildCtx, def: AssetDef, seed: number, trace?: T
   } else if (opts.base) {
     base = ctx.image(opts.base, seed, t).copy();
   } else {
-    let { w, h } = opts;
+    let w = opts.w ? opts.w * k : undefined, h = opts.h ? opts.h * k : undefined;
     if (!w || !h) {
       const s = inferSize(def.items);
       if (opts.mx) s.w = opts.mx === "c" ? 2 * s.w - 1 : 2 * s.w;
       if (opts.my) s.h = opts.my === "c" ? 2 * s.h - 1 : 2 * s.h;
-      w ??= s.w;
-      h ??= s.h;
+      w ??= s.w * k;
+      h ??= s.h * k;
     }
     if (!(w >= 1 && h >= 1) && !opts.mx && !opts.my) {
       // No grids and no size: draw once on a big scratch canvas and take what got painted.
-      const probe = new Img(1024, 1024), pc = new Canvas(probe, pal, ctx, 0, 0, seed);
+      const probe = new Img(1024 * k, 1024 * k), pc = new Canvas(probe, pal, ctx, 0, 0, seed);
+      pc.k = k;
       try { runItems(ctx, def.items, pc, def.loc, () => {}, (l) => {
-        const li = new Img(1024, 1024), lc = new Canvas(li, pal, ctx, l.opts.x ?? 0, l.opts.y ?? 0, seed);
+        const li = new Img(1024 * k, 1024 * k), lc = new Canvas(li, pal, ctx, (l.opts.x ?? 0) * k, (l.opts.y ?? 0) * k, seed);
+        lc.k = k;
         runItems(ctx, l.items, lc, l.loc);
         probe.blit(li, 0, 0);
       }); } catch { /* the real build reports errors */ }
@@ -151,6 +157,7 @@ export function buildAsset(ctx: BuildCtx, def: AssetDef, seed: number, trace?: T
     return c;
   };
   const main = timed(new Canvas(base, pal, ctx, 0, 0, seed));
+  main.k = k;
   hook(main);
   // After lighting(), pixels it changed still count as their palette color for glow().
   let preLight: { before: Uint32Array; after: Uint32Array } | undefined;
@@ -160,7 +167,8 @@ export function buildAsset(ctx: BuildCtx, def: AssetDef, seed: number, trace?: T
     for (let i = 0; i < k.length; i++) if (k[i] === preLight.after[i]) k[i] = preLight.before[i];
     return k;
   };
-  const onPass: OnPass = (name, args, loc) => {
+  const onPass: OnPass = (name, rawArgs, loc) => {
+    const args = scaleArgs(name, rawArgs, k);
     if (name === "glow") {
       base.data.set(applyGlow(base, args[0] as string | string[], (args[1] ?? {}) as GlowOpts, pal, keyed()).data);
       snap?.("glow", loc);
@@ -179,7 +187,8 @@ export function buildAsset(ctx: BuildCtx, def: AssetDef, seed: number, trace?: T
   };
   runItems(ctx, def.items, main, def.loc, onPass, (l) => {
     const limg = new Img(base.w, base.h);
-    const lc = timed(new Canvas(limg, pal, ctx, l.opts.x ?? 0, l.opts.y ?? 0, seed));
+    const lc = timed(new Canvas(limg, pal, ctx, (l.opts.x ?? 0) * k, (l.opts.y ?? 0) * k, seed));
+    lc.k = k;
     lc.below = base;
     hook(lc);
     cur = { img: limg, opts: l.opts };

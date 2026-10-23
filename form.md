@@ -7,6 +7,16 @@ Flat fills read as stickers. Depth comes from four things, and pxl now computes 
 The rule: draw objects as *surfaces in a material's base tone*, then let `form()` light them.
 Never hand-place `shade()` regions to fake volume.
 
+## Resolution: detail(k)
+
+`detail(2)` at the top of a file renders everything at twice the resolution while you keep
+writing logical coordinates. Positions and sizes scale, so curves, form shading, palms, foliage,
+water and textures get twice the detail; **1px lengths stay 1px** (outlines, seams, rails, cords),
+which is what makes the result look finer rather than just bigger. Single pixels (`px`, grid
+chars, `c.plot`/`c.surf` from your own functions) become k x k blocks, so hand-drawn pixel art keeps
+its shape. Use 2 for detailed scenes (e.g. a 480x270 layout rendered at 960x540); props built for
+detail 1 work unchanged. CLI: `pxl build art.px.js --detail 2` overrides it.
+
 ## Materials
 
 ```js

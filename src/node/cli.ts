@@ -8,7 +8,7 @@ import { serve } from "./server.ts";
 
 const USAGE = `pxl — pixel-art DSL
 
-  pxl build <art.px.js> [--out DIR] [--only a,b] [--scale N] [--no-preview]
+  pxl build <art.px.js> [--out DIR] [--only a,b] [--scale N] [--detail K] [--no-preview]
       Build PNGs (out/sprites, out/scenes, out/anims strips + JSON + GIF, sheets + JSON) and
       previews (out/_preview; animated assets also get a .gif).
   pxl serve <art.px.js> [--port 4321] [--out DIR | --no-out] [--no-preview]
@@ -27,6 +27,7 @@ interface Args {
   out?: string | false;
   only?: string[];
   scale?: number;
+  detail?: number;
   preview?: boolean;
   port?: number;
 }
@@ -44,6 +45,7 @@ function parse(argv: string[]): Args {
     else if (v === "--no-out") a.out = false;
     else if (v === "--only") a.only = val().split(",").map((s) => s.trim()).filter(Boolean);
     else if (v === "--scale") a.scale = Number(val());
+    else if (v === "--detail") a.detail = Number(val());
     else if (v === "--port") a.port = Number(val());
     else if (v === "--no-preview") a.preview = false;
     else if (v === "-h" || v === "--help") a.cmd = "help";
@@ -68,6 +70,10 @@ export async function main(argv: string[]): Promise<number> {
     switch (a.cmd) {
       case "build": {
         const p = loadProject(file);
+        if (a.detail) {
+          if (![1, 2, 3, 4].includes(a.detail)) throw new PxError("--detail must be 1, 2, 3 or 4");
+          p.detail = a.detail;
+        }
         const r = writeOutputs(p, outDir, { only: a.only, preview: a.preview, scale: a.scale });
         for (const l of r.lines) console.log(l);
         for (const e of r.errors) console.error("error: " + e.message);
