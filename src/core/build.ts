@@ -105,6 +105,20 @@ export function buildAsset(ctx: BuildCtx, def: AssetDef, seed: number, trace?: T
       w ??= s.w;
       h ??= s.h;
     }
+    if (!(w >= 1 && h >= 1) && !opts.mx && !opts.my) {
+      // No grids and no size: draw once on a big scratch canvas and take what got painted.
+      const probe = new Img(1024, 1024), pc = new Canvas(probe, pal, ctx, 0, 0, seed);
+      try { runItems(ctx, def.items, pc, def.loc, () => {}, (l) => {
+        const li = new Img(1024, 1024), lc = new Canvas(li, pal, ctx, l.opts.x ?? 0, l.opts.y ?? 0, seed);
+        runItems(ctx, l.items, lc, l.loc);
+        probe.blit(li, 0, 0);
+      }); } catch { /* the real build reports errors */ }
+      let mx = -1, my = -1;
+      for (let y = 0; y < probe.h; y++) for (let x = 0; x < probe.w; x++) if (probe.data[y * probe.w + x] !== TRANSPARENT) { if (x > mx) mx = x; if (y > my) my = y; }
+      w ??= mx + 1; h ??= my + 1;
+      if (!(w >= 1)) w = mx + 1;
+      if (!(h >= 1)) h = my + 1;
+    }
     if (!(w >= 1 && h >= 1)) throw new PxError("no size: give { w, h } or a grid string");
     base = new Img(w, h);
   }

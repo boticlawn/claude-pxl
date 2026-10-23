@@ -83,3 +83,10 @@ test("material errors are helpful", () => {
   assert.match(failure('material("o", "#fff", { stps: 4 })').message, /unknown option 'stps'.*did you mean 'steps'/);
   assert.match(failure('pal({ z: "#123456" }); sprite("x", { w: 1, h: 1 }, px(0, 0, "z-1"))', "x").message, /in no ramp/);
 });
+
+test("sprites without grids or size take the size of what they paint", () => {
+  const p = load(`sprite("b", { form: true }, ball(3, 3, 3, "o"), cyl(0, 6, 5, 4, "o"))`);
+  const img = p.image("b");
+  assert.equal(img.w, 7);
+  assert.equal(img.h, 10);
+});

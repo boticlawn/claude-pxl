@@ -40,6 +40,9 @@ They paint the base color *and* a surface normal per pixel.
 | `bump("dome" \| "bevel" \| "luma")` | give normals to anything already drawn (from lighting.md) |
 | `arch(x, y, w, h, c, ring?)` | flat shape: rectangle with a half-ellipse top (windows, doors, arcades) |
 
+Sprites made only of ops may leave out `{ w, h }`: the size is taken from what they paint
+(from 0,0 to the furthest painted pixel). Give it explicitly when you need empty margins.
+
 Details painted *onto* a surface afterwards (`hline`, `px`, a label, plank seams in a step color)
 keep the surface's normal, so they get shaded with it: a band around a barrel curves with it.
 Stamped sprites bring their normals along, flipped correctly.
